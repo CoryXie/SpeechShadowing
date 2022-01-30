@@ -23,6 +23,7 @@ global currentAudioFolder
 global recordedAudioFolder
 global silenceThreshold
 global repeatPlayCount
+global autoPlayNext
 
 originAudioFolder = "./TargetAudio"
 currentAudioFolder = ""
@@ -199,7 +200,9 @@ def translatetargetaudio(event=None):
         filename = getTargetAudioFileName()
         if filename != '':
             speech = SpeechToText.SpeechToText(currentAudioFolder, filename, "config.ini")
-            utils.displayInfoMessage(speech.stt())
+            speechtext = speech.stt()
+            translatedEditArea.text = speechtext
+            #utils.displayInfoMessage(speechtext)
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
@@ -212,9 +215,19 @@ def playthread(filepath):
     for x in range(repeatPlayCount):
         a.play()
         time.sleep(int((length * 0.8)))
+    if (autoPlayNext.get() == 1):
+        selectedTuple = targetAudioListBox.curselection()
+        if (len(selectedTuple) > 0):
+            selected = selectedTuple[0]
+            print("selected index " + str(selected))
+            targetAudioListBox.selection_clear(selected)
+            targetAudioListBox.select_set(selected + 1)
+            targetAudioListBox.see(selected+1)
+            button_playtarget.invoke()
 
 def playtargetaudio(event=None):
     global currentAudioFolder
+    print("playtargetaudio")
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
@@ -379,14 +392,26 @@ topFrame.grid(row=0, column=0, padx=10, pady=5)
 
 # -- create info message area
 utils.infoMessage = tk.StringVar(topFrame)
-ft = tkFont.Font(size=30, weight=tkFont.BOLD)
+ft = tkFont.Font(size=20, weight=tkFont.BOLD)
 infomsg = tk.Label(topFrame, textvariable=utils.infoMessage, fg="blue", font=ft)
 infomsg.pack()
 
 # -- create error message area
-utils.errorMessage = tk.StringVar(utils.root)
+utils.errorMessage = tk.StringVar(topFrame)
 error = tk.Label(topFrame, textvariable=utils.errorMessage, fg="red")
 error.pack()
+
+# -- create translated text area
+translatedFrame = tk.Frame(topFrame)
+translatedScrollbar = tk.Scrollbar(translatedFrame)
+ft = tkFont.Font(size=20, weight=tkFont.BOLD)
+translatedEditArea = tk.Text(translatedFrame, height=3, wrap="word",
+                   yscrollcommand=translatedScrollbar.set,
+                   borderwidth=0, highlightthickness=0, font=ft)
+translatedScrollbar.config(command=translatedEditArea.yview)
+translatedScrollbar.pack(side="right", fill="y")
+translatedEditArea.pack(side="left", fill="both", expand=True)
+translatedFrame.pack()
 
 midFrame = tk.Frame(utils.root)
 midFrame.grid(row=1, column=0, padx=10, pady=5)
@@ -440,11 +465,11 @@ lowRightFrame = tk.Frame(lowFrame)
 lowRightFrame.grid(row=0, column=1, padx=10, pady=5)
 
 # --  create buttons for left frame
-button_playtarget = tk.Button(lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadtargetaudio)
-button_playtarget.pack(pady=5)
+button_load_splited = tk.Button(lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadtargetaudio)
+button_load_splited.pack(pady=5)
 
-button_playboth = tk.Button(lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
-button_playboth.pack(pady=5)
+button_separate_vocal = tk.Button(lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
+button_separate_vocal.pack(pady=5)
 
 # --  create buttons for right frame
 
@@ -457,14 +482,16 @@ button_rec.pack(pady=5)
 button_playboth = tk.Button(lowRightFrame, text='Play Both Audio (Right Ctrl Key)', command=playbothaudio)
 button_playboth.pack(pady=5)
 
-button_playboth = tk.Button(lowRightFrame, text='Translate Target Audio', command=translatetargetaudio)
-button_playboth.pack(pady=5)
+button_translate = tk.Button(lowRightFrame, text='Translate Target Audio', command=translatetargetaudio)
+button_translate.pack(pady=5)
 
 combo_repeat = ttk.Combobox(lowRightFrame)
 combo_repeat['values']= (1, 2, 3, 4, 5)
 combo_repeat.current(0)
 combo_repeat.pack(pady=5)
 
+autoPlayNext = tk.IntVar()
+checkbox_autoplay = tk.Checkbutton(lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=5)
 
 # -- create keybindings
 utils.root.bind("<Return>", playtargetaudio)
