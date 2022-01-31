@@ -206,8 +206,8 @@ def translateTargetAudio(event=None):
         if filename != '':
             speech = SpeechToText.SpeechToText(currentAudioFolder, filename, "config.ini")
             speechtext = speech.stt()
-            translatedEditArea.text = speechtext
-            #utils.displayInfoMessage(speechtext)
+            translatedEditArea.delete("1.0",tk.END)
+            translatedEditArea.insert("end-1c", speechtext)
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
@@ -218,9 +218,21 @@ def saveTranslatedText(event=None):
         filename = getTargetAudioFileName()
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
-            filepath = os.path.join(currentAudioFolder, foldername + "_speechtext.txt")
-            speechTextConfig[foldername][filename] = translatedEditArea.get('0.0', tk.END)
+            speechTextConfig[foldername][filename] = translatedEditArea.get('0.0', tk.END).strip()
             speechTextConfig.write(open(filepath, "w"))
+        else:
+            utils.displayErrorMessage("Select Target Audio First")
+
+def loadTranslatedText(event=None):
+    global currentAudioFolder
+    global speechTextConfig
+    if initialChecks():
+        filename = getTargetAudioFileName()
+        if filename != '':
+            foldername = os.path.basename(os.path.normpath(currentAudioFolder))
+            translatedEditArea.delete("1.0",tk.END)
+            if (speechTextConfig.has_option(foldername, filename)):
+                translatedEditArea.insert("end-1c", speechTextConfig[foldername][filename])
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
@@ -540,6 +552,7 @@ def targetAudioSelectionDown(event=None):
     else:
         targetAudioListBox.select_set(0)
         targetAudioListBox.see(0)
+    loadTranslatedText()
 
 def targetAudioSelectionUp(event=None):
     selectedTuple = targetAudioListBox.curselection()
@@ -553,13 +566,14 @@ def targetAudioSelectionUp(event=None):
     else:
         targetAudioListBox.select_set(0)
         targetAudioListBox.see(0)
+    loadTranslatedText()
 
 utils.root.bind("<Down>", targetAudioSelectionDown)
 utils.root.bind("<Right>", targetAudioSelectionDown)
 utils.root.bind("<Up>", targetAudioSelectionUp)
 utils.root.bind("<Left>", targetAudioSelectionUp)
 utils.root.bind("<space>", startStopRecording)
-
+targetAudioListBox.bind("<<ListboxSelect>>", loadTranslatedText)
 
 if __name__=='__main__':
     # -- load target audio initially. Set info message also has a bonus that it'll start
