@@ -1,6 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog
+from turtle import width
 from spleeter.separator import Separator
 import tkinter.font as tkFont
 import recorder
@@ -17,6 +18,7 @@ import webbrowser
 import markdown
 import utils
 import SpeechToText
+import ichiran
 
 # --- global values ---
 global originAudioFolder
@@ -36,6 +38,7 @@ repeatPlayCount = 1
 
 # -- helper functions
 
+
 def getTargetAudioFileName():
     selectedTuple = targetAudioListBox.curselection()
     if (len(selectedTuple) > 0):
@@ -45,6 +48,7 @@ def getTargetAudioFileName():
     else:
         print("selectedTuple is not greater than 0")
         return ''
+
 
 def getOriginAudioFileName():
     selectedTuple = originAudioListBox.curselection()
@@ -56,19 +60,22 @@ def getOriginAudioFileName():
         print("selectedTuple is not greater than 0")
         return ''
 
+
 def getRecordedAudioFileName():
     targetFilename = getOriginAudioFileName()
     if targetFilename != '':
-        filename = "recordedAudio-" + targetFilename[0:len(targetFilename)-4] + ".wav"
+        filename = "recordedAudio-" + \
+            targetFilename[0:len(targetFilename)-4] + ".wav"
         return filename
     else:
         print("targetfilename doesn't exist")
         return ''
 
+
 def loadTargetAudioList(folder):
     # remove all elements in targetAudioListbox
     targetAudioListBox.delete(0, targetAudioListBox.size())
-    #loop thru files
+    # loop thru files
     fileList = os.listdir(folder)
     fileList.sort()
     for file in fileList:
@@ -78,12 +85,14 @@ def loadTargetAudioList(folder):
             length = audioFile.length()
             displaylength = ""
             if length > 60:
-                displaylength = str(math.floor(length/60)) + ":" + str(math.floor(length % 60)).zfill(2)
+                displaylength = str(math.floor(length/60)) + \
+                    ":" + str(math.floor(length % 60)).zfill(2)
             else:
                 displaylength = str(math.floor(length % 60)) + " seconds"
             foldername = os.path.basename(os.path.normpath(folder))
             if (speechTextConfig.has_option(foldername, file)):
-                displayname += " - " + displaylength + " [" + speechTextConfig[foldername][file] + "]"
+                displayname += " - " + displaylength + \
+                    " [" + speechTextConfig[foldername][file] + "]"
             else:
                 displayname += " - " + displaylength
             targetAudioListBox.insert("end", displayname)
@@ -95,24 +104,27 @@ def loadTargetAudioList(folder):
 def loadOriginAudioList():
     # remove all elements in originAudioListBox
     originAudioListBox.delete(0, originAudioListBox.size())
-    #loop thru files
+    # loop thru files
     fileList = os.listdir(originAudioFolder)
     fileList.sort()
     for file in fileList:
         if file[len(file) - 4:] in [".wav", ".mp3"]:
             displayname = file
-            audioFile = AudioFile.audiofile(os.path.join(originAudioFolder, file))
+            audioFile = AudioFile.audiofile(
+                os.path.join(originAudioFolder, file))
             length = audioFile.length()
             displaylength = ""
             if length > 60:
-                displaylength = str(math.floor(length/60)) + ":" + str(math.floor(length % 60)).zfill(2)
+                displaylength = str(math.floor(length/60)) + \
+                    ":" + str(math.floor(length % 60)).zfill(2)
             else:
                 displaylength = str(math.floor(length % 60)) + " seconds"
             displayname += " - " + displaylength
-            originAudioListBox.insert("end", displayname )
+            originAudioListBox.insert("end", displayname)
             originAudioListBox.see(targetAudioListBox.size())
             utils.root.update()
-            
+
+
 def refreshOriginAudioList():
     global running
     if running is not None:
@@ -121,18 +133,21 @@ def refreshOriginAudioList():
         loading = threading.Thread(target=loadOriginAudioList)
         loading.start()
 
+
 def refreshTargetAudioList():
     global running
     global currentAudioFolder
     if running is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
-        loading = threading.Thread(target=loadTargetAudioList, args=(currentAudioFolder,))
+        loading = threading.Thread(
+            target=loadTargetAudioList, args=(currentAudioFolder,))
         loading.start()
+
 
 def initialChecks():
     global running
-    #general things to do before running events
+    # general things to do before running events
     if running is not None:
         utils.displayErrorMessage('Recording Audio, Stop That First')
         return False
@@ -142,36 +157,45 @@ def initialChecks():
 
 # -- event functions
 
+
 def openHelp(event=None):
     if not os.path.exists("./README.html"):
         if os.path.exists("./README.MD"):
-            markdown.markdownFromFile(input="./README.MD",output="./README.html")
+            markdown.markdownFromFile(
+                input="./README.MD", output="./README.html")
         else:
             utils.displayErrorMessage("Cannot find help page")
             return
     webbrowser.open('./README.html')
 
 # -- Target Audio Events --
+
+
 def uploadTargetAudio(event=None):
     if initialChecks():
-        filenames = filedialog.askopenfilenames(title="Select Target Audio", filetypes=[("Audio Files", ".mp3 .wav")])
+        filenames = filedialog.askopenfilenames(
+            title="Select Target Audio", filetypes=[("Audio Files", ".mp3 .wav")])
         for filename in filenames:
             shutil.copy(filename, originAudioFolder)
         if (len(filenames) > 0):
             refreshOriginAudioList()
+
 
 def splitAudio(filename):
     print(filename)
     separator = Separator('spleeter:2stems')
     separator.separate_to_file(filename, originAudioFolder)
 
+
 def separateAudioVocals(event=None):
     if initialChecks():
-        filenames = filedialog.askopenfilenames(title="Select Target Audio", filetypes=[("Audio Files", ".mp3 .wav")])
+        filenames = filedialog.askopenfilenames(
+            title="Select Target Audio", filetypes=[("Audio Files", ".mp3 .wav")])
         for filename in filenames:
             # Using embedded configuration.
             splitting = threading.Thread(target=splitAudio, args=(filename,))
             splitting.start()
+
 
 def deleteOriginAudio(event=None):
     # remove all elements in targetAudioListbox
@@ -179,6 +203,7 @@ def deleteOriginAudio(event=None):
         filename = getOriginAudioFileName()
         os.remove(os.path.join(originAudioFolder, filename))
         refreshOriginAudioList()
+
 
 def deleteTargetAudio(event=None):
     global currentAudioFolder
@@ -188,53 +213,71 @@ def deleteTargetAudio(event=None):
         os.remove(os.path.join(currentAudioFolder, filename))
         refreshTargetAudioList()
 
+
 def splitOriginAudio(event=None):
     global silenceThreshold
     if initialChecks():
         filename = getOriginAudioFileName()
         if filename != '':
-            audiosplit = audioSplitter.AudioSplitter(originAudioFolder, filename, silencethresh=silenceThreshold)
+            audiosplit = audioSplitter.AudioSplitter(
+                originAudioFolder, filename, silencethresh=silenceThreshold)
             audiosplit.split()
             refreshOriginAudioList()
         else:
             utils.displayErrorMessage('Select Target Audio To Split')
 
-def translateTargetAudio(event=None):
+
+def convertSpeechText(event=None):
     global currentAudioFolder
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
-            speech = SpeechToText.SpeechToText(currentAudioFolder, filename, "config.ini")
+            speech = SpeechToText.SpeechToText(
+                currentAudioFolder, filename, "config.ini")
             speechtext = speech.stt()
-            translatedEditArea.delete("1.0",tk.END)
-            translatedEditArea.insert("end-1c", speechtext)
+            speechtextEditArea.delete("1.0", tk.END)
+            speechtextEditArea.insert("end-1c", speechtext)
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
-def saveTranslatedText(event=None):
+
+def saveSpeechText(event=None):
     global currentAudioFolder
     global speechTextConfig
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
-            speechTextConfig[foldername][filename] = translatedEditArea.get('0.0', tk.END).strip()
+            speechTextConfig[foldername][filename] = speechtextEditArea.get(
+                '0.0', tk.END).strip()
             speechTextConfig.write(open(filepath, "w"))
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
-def loadTranslatedText(event=None):
+
+def infoSpeechText(event=None):
+    if initialChecks():
+        speechtext = speechtextEditArea.get(
+            '0.0', tk.END).strip()
+        speechinfo = ichiran.ichiran(speechtext).info()
+        speechinfoEditArea.delete("1.0", tk.END)
+        speechinfoEditArea.insert("end-1c", speechinfo)
+
+
+def loadSpeechText(event=None):
     global currentAudioFolder
     global speechTextConfig
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
-            translatedEditArea.delete("1.0",tk.END)
+            speechtextEditArea.delete("1.0", tk.END)
             if (speechTextConfig.has_option(foldername, filename)):
-                translatedEditArea.insert("end-1c", speechTextConfig[foldername][filename])
+                speechtextEditArea.insert(
+                    "end-1c", speechTextConfig[foldername][filename])
         else:
             utils.displayErrorMessage("Select Target Audio First")
+
 
 def playthread(filepath):
     global repeatPlayCount
@@ -255,6 +298,7 @@ def playthread(filepath):
             targetAudioListBox.see(selected+1)
             button_playtarget.invoke()
 
+
 def playTargetAudio(event=None):
     global currentAudioFolder
     print("playTargetAudio")
@@ -269,46 +313,53 @@ def playTargetAudio(event=None):
         else:
             utils.displayErrorMessage("Select Target Audio First")
 
+
 def loadTargetAudio(event=None):
     global currentAudioFolder
     global speechTextConfig
     if initialChecks():
         filename = getOriginAudioFileName()
         if filename != '':
-            foldername = filename.rsplit(".", 1)[0];
+            foldername = filename.rsplit(".", 1)[0]
             print("loading " + filename)
             print("foldername " + foldername)
             filepath = os.path.join(originAudioFolder, foldername)
             currentAudioFolder = filepath
             print("currentAudioFolder " + currentAudioFolder)
             #foldername = os.path.basename(os.path.normpath(currentAudioFolder))
-            speechfilepath = os.path.join(currentAudioFolder, foldername + "_speechtext.txt")
+            speechfilepath = os.path.join(
+                currentAudioFolder, foldername + "_speechtext.txt")
             speechTextConfig = configparser.ConfigParser()
             if (os.path.exists(speechfilepath)):
                 speechTextConfig.read(speechfilepath)
             else:
                 speechTextConfig.add_section(foldername)
-            loading = threading.Thread(target=loadTargetAudioList, args=(filepath,))
+            loading = threading.Thread(
+                target=loadTargetAudioList, args=(filepath,))
             loading.start()
         else:
             utils.displayErrorMessage("Select Origin Audio First")
 
 # -- Recorded Audio Events --
+
+
 def playRecordedAudio(event=None):
     if initialChecks():
         filename = getRecordedAudioFileName()
         if filename != '':
             if os.path.exists(os.path.join(recordedAudioFolder, filename)):
                 print("playing " + os.path.join(recordedAudioFolder, filename))
-                a = AudioFile.audiofile(os.path.join(recordedAudioFolder, filename))
+                a = AudioFile.audiofile(os.path.join(
+                    recordedAudioFolder, filename))
                 a.play()
             else:
                 utils.displayErrorMessage("You must record audio first")
         else:
             utils.displayErrorMessage("You must record audio first")
 
+
 def playBothAudio(event=None):
-   if initialChecks():
+    if initialChecks():
         playTargetAudio()
         playRecordedAudio()
 
@@ -318,10 +369,12 @@ def startRecording(event=None):
     if initialChecks():
         filename = getRecordedAudioFileName()
         if filename != '':
-            running = rec.open(os.path.join(recordedAudioFolder,filename), 'wb')
+            running = rec.open(os.path.join(
+                recordedAudioFolder, filename), 'wb')
             running.start_recording()
         else:
             utils.displayErrorMessage("Select Target Audio First")
+
 
 def stopRecording(event=None):
     global running
@@ -333,6 +386,7 @@ def stopRecording(event=None):
     else:
         utils.displayErrorMessage('Recording Not Running')
 
+
 def startStopRecording(event=None):
     global running
     if running is not None:
@@ -342,7 +396,7 @@ def startStopRecording(event=None):
 
 
 def displayHotkeysPopup(event=None):
-    hotkeyList="""
+    hotkeyList = """
     Start/Stop recording - Space bar
     Listen to target audio - Enter
     Navigate Target Audio List - Up/Down arrow keys
@@ -358,6 +412,7 @@ def displayHotkeysPopup(event=None):
     button.pack(pady=5)
     utils.root.wait_window(popupWindow)
 
+
 def updateSilenceThreshhold(event=None):
     global silenceThreshold
 
@@ -370,19 +425,21 @@ def updateSilenceThreshhold(event=None):
         except:
             popupErrorMsg.set("Must be a valid number")
 
-
     popupWindow = tk.Toplevel(utils.root)
     popupWindow.wm_geometry("1000x250")
     popupWindow.title("Change Silence dBS")
-    popupLabel = tk.Label(popupWindow, text="Update what 'silence' is defined as when splitting target audio (in dBS)")
+    popupLabel = tk.Label(
+        popupWindow, text="Update what 'silence' is defined as when splitting target audio (in dBS)")
     popupLabel.pack(pady=5)
-    popupLabel2 = tk.Label(popupWindow, text="Current Silence Threshold is: " + str(silenceThreshold) + "dBS")
+    popupLabel2 = tk.Label(
+        popupWindow, text="Current Silence Threshold is: " + str(silenceThreshold) + "dBS")
     popupLabel2.pack(pady=5)
 
     popupEntry = tk.Entry(popupWindow)
     popupEntry.pack()
 
-    button = tk.Button(popupWindow, text="Update", command=silenceThreshholdClose)
+    button = tk.Button(popupWindow, text="Update",
+                       command=silenceThreshholdClose)
     button.pack(pady=5)
 
     popupErrorMsg = tk.StringVar()
@@ -392,6 +449,7 @@ def updateSilenceThreshhold(event=None):
     utils.root.wait_window(popupWindow)
 
 # --- main ---
+
 
 # create the target audio and recorded audio folders, if they don't already exist
 if not os.path.exists(originAudioFolder):
@@ -405,14 +463,18 @@ running = None
 utils.root = tk.Tk()
 utils.root.title("Speech Shadowing App")
 
-# -- create menu bar --
+# Create menu bar
 menubar = tk.Menu(utils.root)
 filemenu = tk.Menu(menubar, tearoff=0)
 filemenu.add_command(label="Upload Origin Audio", command=uploadTargetAudio)
-filemenu.add_command(label="Separate Vocals from Origin Audio", command=separateAudioVocals)
-filemenu.add_command(label="Split Origin Audio on Silences", command=splitOriginAudio)
-filemenu.add_command(label="Delete Selected Target Audio", command=deleteTargetAudio)
-filemenu.add_command(label="Update Silence Threshold", command=updateSilenceThreshhold)
+filemenu.add_command(
+    label="Separate Vocals from Origin Audio", command=separateAudioVocals)
+filemenu.add_command(label="Split Origin Audio on Silences",
+                     command=splitOriginAudio)
+filemenu.add_command(label="Delete Selected Target Audio",
+                     command=deleteTargetAudio)
+filemenu.add_command(label="Update Silence Threshold",
+                     command=updateSilenceThreshhold)
 filemenu.add_separator()
 
 filemenu.add_command(label="Exit", command=utils.root.quit)
@@ -425,36 +487,55 @@ menubar.add_cascade(label="Help", menu=helpmenu)
 
 utils.root.config(menu=menubar)
 
-topFrame = tk.Frame(utils.root)
+# Create app left frame
+appLeftFrame = tk.Frame(utils.root)
+appLeftFrame.grid(row=0, column=0, padx=5, pady=5)
+
+# Create app right frame
+appRightFrame = tk.Frame(utils.root)
+appRightFrame.grid(row=0, column=1, padx=5, pady=5)
+
+utils.root.columnconfigure(0, weight=1)
+utils.root.columnconfigure(1, weight=3)
+
+# Generate top frame
+topFrame = tk.Frame(appLeftFrame)
 topFrame.grid(row=0, column=0, padx=10, pady=5)
 
-# -- create info message area
+# create info message area
 utils.infoMessage = tk.StringVar(topFrame)
-ft = tkFont.Font(size=20, weight=tkFont.BOLD)
-infomsg = tk.Label(topFrame, textvariable=utils.infoMessage, fg="blue", font=ft)
+ft = tkFont.Font(size=15, weight=tkFont.BOLD)
+infomsg = tk.Label(topFrame, textvariable=utils.infoMessage,
+                   fg="blue", font=ft)
 infomsg.pack()
 
-# -- create error message area
+# create error message area
 utils.errorMessage = tk.StringVar(topFrame)
-error = tk.Label(topFrame, textvariable=utils.errorMessage, fg="red")
+ft = tkFont.Font(size=15, weight=tkFont.BOLD)
+error = tk.Label(topFrame, textvariable=utils.errorMessage, fg="red", font=ft)
 error.pack()
 
-# -- create translated text area
-translatedFrame = tk.Frame(topFrame)
-translatedScrollbar = tk.Scrollbar(translatedFrame)
-ft = tkFont.Font(size=20, weight=tkFont.BOLD)
-translatedEditArea = tk.Text(translatedFrame, height=3, wrap="word",
-                   yscrollcommand=translatedScrollbar.set,
-                   borderwidth=0, highlightthickness=0, font=ft)
-translatedScrollbar.config(command=translatedEditArea.yview)
-translatedScrollbar.pack(side="right", fill="y")
-translatedEditArea.pack(side="left", fill="both", expand=True)
-translatedFrame.pack()
+# create speechtext text area
+speechtextFrame = tk.Frame(topFrame)
+speechtextScrollbarX = tk.Scrollbar(speechtextFrame)
+speechtextScrollbarY = tk.Scrollbar(speechtextFrame)
+ft = tkFont.Font(size=15, weight=tkFont.BOLD)
+speechtextEditArea = tk.Text(speechtextFrame, height=3, wrap="word",
+                             xscrollcommand=speechtextScrollbarX.set,
+                             yscrollcommand=speechtextScrollbarY.set,
+                             borderwidth=0, highlightthickness=0, font=ft)
+speechtextScrollbarX.config(command=speechtextEditArea.xview)
+speechtextScrollbarX.pack(side="bottom", fill="x")
+speechtextScrollbarY.config(command=speechtextEditArea.yview)
+speechtextScrollbarY.pack(side="right", fill="y")
+speechtextEditArea.pack(side="left", fill="both", expand=True)
+speechtextFrame.pack()
 
-midFrame = tk.Frame(utils.root)
+# Generate middle frame
+midFrame = tk.Frame(appLeftFrame)
 midFrame.grid(row=1, column=0, padx=10, pady=5)
 
-# -- generate list of original audio
+# generate list of original audio
 originAudioFrame = tk.Frame(midFrame)
 originAudioFrame.grid(row=0, column=0, padx=10, pady=5)
 
@@ -464,82 +545,133 @@ label.pack()
 originAudioListBoxFrame = tk.Frame(originAudioFrame)
 originAudioListBoxFrame.pack(padx=10)
 
-originAudioListBox = tk.Listbox(originAudioListBoxFrame, selectmode="SINGLE", width=75)
+originAudioListBox = tk.Listbox(
+    originAudioListBoxFrame, selectmode="SINGLE", width=40)
 
 originScrollbar = tk.Scrollbar(originAudioListBoxFrame)
-originScrollbar.pack(side=tk.RIGHT, fill=tk.Y,pady=5)
+originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5)
 originAudioListBox.config(yscrollcommand=originScrollbar.set)
 originScrollbar.config(command=originAudioListBox.yview)
 
 originAudioListBox.pack(pady=5)
 
-# -- generate list of splited audio
+# generate list of splited audio
 targetAudioFrame = tk.Frame(midFrame)
 targetAudioFrame.grid(row=0, column=1, padx=10, pady=5)
 
+# create target audio list
 label = tk.Label(targetAudioFrame, text="Target Audio List")
 label.pack()
 
 targetAudioListBoxFrame = tk.Frame(targetAudioFrame)
 targetAudioListBoxFrame.pack(padx=10)
 
-targetAudioListBox = tk.Listbox(targetAudioListBoxFrame, selectmode="SINGLE", width=75)
+targetAudioListBox = tk.Listbox(
+    targetAudioListBoxFrame, selectmode="SINGLE", width=100)
 
-
+# - create target audio list scroll bar
 scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y,pady=5)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5)
 targetAudioListBox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=targetAudioListBox.yview)
 
 targetAudioListBox.pack(pady=5)
 
-lowFrame = tk.Frame(utils.root)
+midFrame.columnconfigure(0, weight=1, minsize=40)
+midFrame.columnconfigure(1, weight=1, minsize=100)
+
+# Generate low frame
+lowFrame = tk.Frame(appLeftFrame)
 lowFrame.grid(row=2, column=0, padx=10, pady=5)
 
+# create low left frame
 lowLeftFrame = tk.Frame(lowFrame)
 lowLeftFrame.grid(row=0, column=0, padx=10, pady=5)
 
+# create low middle frame
 lowMiddleFrame = tk.Frame(lowFrame)
 lowMiddleFrame.grid(row=0, column=1, padx=10, pady=5)
 
+# create low right frame
 lowRightFrame = tk.Frame(lowFrame)
 lowRightFrame.grid(row=0, column=2, padx=10, pady=5)
 
-# --  create buttons for left frame
-button_load_splited = tk.Button(lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio)
+lowFrame.columnconfigure(0, weight=1)
+lowFrame.columnconfigure(1, weight=1)
+lowFrame.columnconfigure(2, weight=1)
+
+# create buttons for left frame
+button_load_splited = tk.Button(
+    lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio)
 button_load_splited.pack(pady=5)
 
-button_separate_vocal = tk.Button(lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
+button_separate_vocal = tk.Button(
+    lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
 button_separate_vocal.pack(pady=5)
 
-# --  create buttons for right frame
+# create buttons for right frame
 
-button_playtarget = tk.Button(lowMiddleFrame, text='Play Target Audio (Enter Key)', command=playTargetAudio)
+button_playtarget = tk.Button(
+    lowMiddleFrame, text='Play Target Audio (Enter Key)', command=playTargetAudio)
 button_playtarget.pack(pady=5)
 
-button_rec = tk.Button(lowMiddleFrame, text='Start/Stop Recording (Space bar)', command=startStopRecording)
+button_rec = tk.Button(
+    lowMiddleFrame, text='Start/Stop Recording (Space bar)', command=startStopRecording)
 button_rec.pack(pady=5)
 
-button_playboth = tk.Button(lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio)
+button_playboth = tk.Button(
+    lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio)
 button_playboth.pack(pady=5)
 
-button_translate = tk.Button(lowRightFrame, text='Translate Target Audio', command=translateTargetAudio)
-button_translate.pack(pady=5)
+button_convert_speechtext = tk.Button(
+    lowRightFrame, text='Convert Speech to Text', command=convertSpeechText)
+button_convert_speechtext.pack(pady=5)
 
-save_translate = tk.Button(lowRightFrame, text='Save Translated Text', command=saveTranslatedText)
-save_translate.pack(pady=5)
+button_save_speechtext = tk.Button(
+    lowRightFrame, text='Save Speech to Text', command=saveSpeechText)
+button_save_speechtext.pack(pady=5)
+
+button_info_speechtext = tk.Button(
+    lowRightFrame, text='Speech Text Info', command=infoSpeechText)
+button_info_speechtext.pack(pady=5)
 
 combo_repeat = ttk.Combobox(lowRightFrame)
-combo_repeat['values']= (1, 2, 3, 4, 5)
+combo_repeat['values'] = (1, 2, 3, 4, 5)
 combo_repeat.current(0)
 combo_repeat.pack(pady=5)
 
 autoPlayNext = tk.IntVar()
-checkbox_autoplay = tk.Checkbutton(lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=5)
+checkbox_autoplay = tk.Checkbutton(
+    lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=5)
 
-# -- create keybindings
+# Create app right frame
+
+# generate speech info frame
+
+speechinfoFrame = tk.Frame(appRightFrame)
+speechinfoFrame.grid(row=0, column=0, padx=10, pady=5)
+
+label = tk.Label(speechinfoFrame, text="Speech Text Info")
+label.pack()
+
+# create speech text info area
+speechinfoScrollbarX = tk.Scrollbar(speechinfoFrame)
+speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
+ft = tkFont.Font(weight=tkFont.BOLD)
+speechinfoEditArea = tk.Text(speechinfoFrame, wrap="word",
+                             xscrollcommand=speechinfoScrollbarX.set,
+                             yscrollcommand=speechinfoScrollbarY.set,
+                             borderwidth=0, highlightthickness=0, font=ft)
+speechinfoScrollbarX.config(command=speechinfoEditArea.xview)
+speechinfoScrollbarX.pack(side="bottom", fill="x")
+speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
+speechinfoScrollbarY.pack(side="right", fill="y")
+speechinfoEditArea.pack(side="left", fill="both", expand=True)
+
+# Create keybindings
 utils.root.bind("<Return>", playTargetAudio)
 utils.root.bind("<Control_R>", playBothAudio)
+
 
 def targetAudioSelectionDown(event=None):
     selectedTuple = targetAudioListBox.curselection()
@@ -552,7 +684,8 @@ def targetAudioSelectionDown(event=None):
     else:
         targetAudioListBox.select_set(0)
         targetAudioListBox.see(0)
-    loadTranslatedText()
+    loadSpeechText()
+
 
 def targetAudioSelectionUp(event=None):
     selectedTuple = targetAudioListBox.curselection()
@@ -566,19 +699,20 @@ def targetAudioSelectionUp(event=None):
     else:
         targetAudioListBox.select_set(0)
         targetAudioListBox.see(0)
-    loadTranslatedText()
+    loadSpeechText()
+
 
 utils.root.bind("<Down>", targetAudioSelectionDown)
 utils.root.bind("<Right>", targetAudioSelectionDown)
 utils.root.bind("<Up>", targetAudioSelectionUp)
 utils.root.bind("<Left>", targetAudioSelectionUp)
 utils.root.bind("<space>", startStopRecording)
-targetAudioListBox.bind("<<ListboxSelect>>", loadTranslatedText)
+targetAudioListBox.bind("<<ListboxSelect>>", loadSpeechText)
 
-if __name__=='__main__':
+if __name__ == '__main__':
     # -- load target audio initially. Set info message also has a bonus that it'll start
     # the GUI before the targetAudio list has completed
     utils.displayInfoMessage("Loading Origin Audio...")
     refreshOriginAudioList()
     utils.displayInfoMessage("")
-    utils.root.mainloop() 
+    utils.root.mainloop()
