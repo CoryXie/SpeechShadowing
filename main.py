@@ -3,6 +3,7 @@ import tkinter.ttk as ttk
 from tkinter import filedialog
 from turtle import width
 from spleeter.separator import Separator
+from tkhtmlview import HTMLScrolledText
 import tkinter.font as tkFont
 import recorder
 import AudioFile
@@ -14,6 +15,7 @@ import math
 import shutil
 import threading
 import configparser
+import markdown
 import webbrowser
 import markdown
 import utils
@@ -493,61 +495,63 @@ menubar.add_cascade(label="Help", menu=helpmenu)
 utils.root.config(menu=menubar)
 
 # Create app left frame
-appLeftFrame = tk.Frame(utils.root)
+appLeftFrame = tk.Frame(utils.root, bg='light sky blue')
 appLeftFrame.grid(row=0, column=0, padx=5, pady=5)
 
 # Create app right frame
-appRightFrame = tk.Frame(utils.root)
+appRightFrame = tk.Frame(utils.root, bg='light sky blue')
 appRightFrame.grid(row=0, column=1, padx=5, pady=5)
 
 utils.root.columnconfigure(0, weight=1)
 utils.root.columnconfigure(1, weight=3)
 
 # Generate top frame
-topFrame = tk.Frame(appLeftFrame)
+topFrame = tk.Frame(appLeftFrame, bg='light sky blue')
 topFrame.grid(row=0, column=0)
 
 # create info message area
 utils.infoMessage = tk.StringVar(topFrame)
 ft = tkFont.Font(size=15, weight=tkFont.BOLD)
 infomsg = tk.Label(topFrame, textvariable=utils.infoMessage,
-                   fg="blue", font=ft)
+                   fg="blue", font=ft, bg='light sky blue')
 infomsg.pack()
 
 # create error message area
 utils.errorMessage = tk.StringVar(topFrame)
 ft = tkFont.Font(size=15, weight=tkFont.BOLD)
-error = tk.Label(topFrame, textvariable=utils.errorMessage, fg="red", font=ft)
+error = tk.Label(topFrame, textvariable=utils.errorMessage,
+                 fg="red", font=ft, bg='light sky blue')
 error.pack()
 
 # create speechtext text area
-speechtextFrame = tk.Frame(topFrame)
+speechtextFrame = tk.Frame(topFrame, bg='light sky blue')
 speechtextScrollbarY = tk.Scrollbar(speechtextFrame)
 ft = tkFont.Font(size=15, weight=tkFont.BOLD)
 speechtextEditArea = tk.Text(speechtextFrame, height=8, wrap="word",
                              yscrollcommand=speechtextScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft, width=50)
+                             borderwidth=0, highlightthickness=0, font=ft, width=50, bg="#F4F5FF", fg='magenta2')
 speechtextScrollbarY.config(command=speechtextEditArea.yview)
 speechtextScrollbarY.pack(side="right", fill="y")
 speechtextEditArea.pack(side="left", fill="both", expand=True)
 speechtextFrame.pack()
 
 # Generate middle frame
-midFrame = tk.Frame(appLeftFrame)
+midFrame = tk.Frame(appLeftFrame, bg='light sky blue')
 midFrame.grid(row=1, column=0)
 
 # generate list of original audio
-originAudioFrame = tk.Frame(midFrame)
+originAudioFrame = tk.Frame(midFrame, bg='light sky blue')
 originAudioFrame.grid(row=0, column=0)
 
-label = tk.Label(originAudioFrame, text="Origin Audio List")
+label = tk.Label(originAudioFrame, text="Origin Audio List",
+                 bg='light sky blue')
 label.pack()
 
-originAudioListBoxFrame = tk.Frame(originAudioFrame)
+originAudioListBoxFrame = tk.Frame(originAudioFrame, bg='light sky blue')
 originAudioListBoxFrame.pack()
 
 originAudioListBox = tk.Listbox(
-    originAudioListBoxFrame, selectmode="SINGLE", width=25, exportselection=False)
+    originAudioListBoxFrame, selectmode="SINGLE", width=25, exportselection=False, bg="#F4F5FF", fg='HotPink1')
 
 originScrollbar = tk.Scrollbar(originAudioListBoxFrame)
 originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
@@ -557,18 +561,19 @@ originScrollbar.config(command=originAudioListBox.yview)
 originAudioListBox.pack(pady=2)
 
 # generate list of splited audio
-targetAudioFrame = tk.Frame(midFrame)
+targetAudioFrame = tk.Frame(midFrame, bg='light sky blue')
 targetAudioFrame.grid(row=0, column=1, padx=2, pady=2)
 
 # create target audio list
-label = tk.Label(targetAudioFrame, text="Target Audio List")
+label = tk.Label(targetAudioFrame, text="Target Audio List",
+                 bg='light sky blue')
 label.pack()
 
-targetAudioListBoxFrame = tk.Frame(targetAudioFrame)
+targetAudioListBoxFrame = tk.Frame(targetAudioFrame, bg='light sky blue')
 targetAudioListBoxFrame.pack(padx=5)
 
 targetAudioListBox = tk.Listbox(
-    targetAudioListBoxFrame, selectmode="SINGLE", width=60, exportselection=False)
+    targetAudioListBoxFrame, selectmode="SINGLE", width=60, exportselection=False, bg="#F4F5FF", fg='HotPink1')
 
 # - create target audio list scroll bar
 scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
@@ -582,19 +587,19 @@ midFrame.columnconfigure(0, weight=1, minsize=40)
 midFrame.columnconfigure(1, weight=1, minsize=100)
 
 # Generate low frame
-lowFrame = tk.Frame(appLeftFrame)
+lowFrame = tk.Frame(appLeftFrame, bg='light sky blue')
 lowFrame.grid(row=2, column=0)
 
 # create low left frame
-lowLeftFrame = tk.Frame(lowFrame)
+lowLeftFrame = tk.Frame(lowFrame, bg='light sky blue')
 lowLeftFrame.grid(row=0, column=0, padx=5, pady=2)
 
 # create low middle frame
-lowMiddleFrame = tk.Frame(lowFrame)
+lowMiddleFrame = tk.Frame(lowFrame, bg='light sky blue')
 lowMiddleFrame.grid(row=0, column=1, padx=5, pady=2)
 
 # create low right frame
-lowRightFrame = tk.Frame(lowFrame)
+lowRightFrame = tk.Frame(lowFrame, bg='light sky blue')
 lowRightFrame.grid(row=0, column=2, padx=5, pady=2)
 
 lowFrame.columnconfigure(0, weight=1)
@@ -603,37 +608,37 @@ lowFrame.columnconfigure(2, weight=1)
 
 # create buttons for left frame
 button_load_splited = tk.Button(
-    lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio)
+    lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio, width=35)
 button_load_splited.pack(pady=2)
 
 button_separate_vocal = tk.Button(
-    lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
+    lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals, width=35)
 button_separate_vocal.pack(pady=2)
 
 # create buttons for right frame
 
 button_playtarget = tk.Button(
-    lowMiddleFrame, text='Play Target Audio (Enter Key)', command=playTargetAudio)
+    lowMiddleFrame, text='Play Target Audio (Left Alt Key)', command=playTargetAudio, width=25)
 button_playtarget.pack(pady=2)
 
 button_rec = tk.Button(
-    lowMiddleFrame, text='Start/Stop Recording (Space bar)', command=startStopRecording)
+    lowMiddleFrame, text='Toggle Recording (Right Shift Key)', command=startStopRecording, width=25)
 button_rec.pack(pady=2)
 
 button_playboth = tk.Button(
-    lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio)
+    lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio, width=25)
 button_playboth.pack(pady=2)
 
 button_convert_speechtext = tk.Button(
-    lowRightFrame, text='Convert Speech to Text', command=convertSpeechText)
+    lowRightFrame, text='Convert Speech to Text', command=convertSpeechText, width=20)
 button_convert_speechtext.pack(pady=2)
 
 button_save_speechtext = tk.Button(
-    lowRightFrame, text='Save Speech to Text', command=saveSpeechText)
+    lowRightFrame, text='Save Speech to Text', command=saveSpeechText, width=20)
 button_save_speechtext.pack(pady=2)
 
 button_info_speechtext = tk.Button(
-    lowRightFrame, text='Speech Text Info', command=infoSpeechText)
+    lowRightFrame, text='Speech Text Meanings', command=infoSpeechText, width=20)
 button_info_speechtext.pack(pady=2)
 
 combo_repeat = ttk.Combobox(lowRightFrame)
@@ -649,26 +654,25 @@ checkbox_autoplay = tk.Checkbutton(
 
 # generate speech info frame
 
-speechinfoFrame = tk.Frame(appRightFrame)
+speechinfoFrame = tk.Frame(appRightFrame, bg='light sky blue')
 speechinfoFrame.grid(row=0, column=0, padx=5, pady=2)
 
-label = tk.Label(speechinfoFrame, text="Speech Text Info")
+label = tk.Label(speechinfoFrame, text="Speech Text Meanings", bg="#F4F5FF", fg='Blue2')
 label.pack()
 
 # create speech text info area
 speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
-ft = tkFont.Font(weight=tkFont.BOLD)
+ft = tkFont.Font(family="Courier New")
 speechinfoEditArea = tk.Text(speechinfoFrame, height=30, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft, width=60)
+                             borderwidth=0, highlightthickness=0, font=ft, width=60, bg="#F4F5FF", fg='HotPink1')
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
 speechinfoScrollbarY.pack(side="right", fill="y")
 speechinfoEditArea.pack(side="left", fill="both", expand=True)
 
 # Create keybindings
-utils.root.bind("<Return>", playTargetAudio)
+utils.root.bind("<Alt_R>", playTargetAudio)
 utils.root.bind("<Control_R>", playBothAudio)
-
 
 def targetAudioSelectionDown(event=None):
     selectedTuple = targetAudioListBox.curselection()
@@ -703,7 +707,7 @@ utils.root.bind("<Down>", targetAudioSelectionDown)
 utils.root.bind("<Right>", targetAudioSelectionDown)
 utils.root.bind("<Up>", targetAudioSelectionUp)
 utils.root.bind("<Left>", targetAudioSelectionUp)
-utils.root.bind("<space>", startStopRecording)
+utils.root.bind("<Shift_R>", startStopRecording)
 targetAudioListBox.bind("<<ListboxSelect>>", loadSpeechText)
 
 if __name__ == '__main__':
