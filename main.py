@@ -462,6 +462,10 @@ rec = recorder.Recorder(channels=2)
 running = None
 
 utils.root = tk.Tk()
+width = utils.root .winfo_screenwidth()
+height = utils.root .winfo_screenheight()
+utils.root.geometry("%dx%d" % (width, height))
+
 utils.root.title("Speech Shadowing App")
 
 # Create menu bar
@@ -501,7 +505,7 @@ utils.root.columnconfigure(1, weight=3)
 
 # Generate top frame
 topFrame = tk.Frame(appLeftFrame)
-topFrame.grid(row=0, column=0, padx=10, pady=5)
+topFrame.grid(row=0, column=0)
 
 # create info message area
 utils.infoMessage = tk.StringVar(topFrame)
@@ -518,15 +522,11 @@ error.pack()
 
 # create speechtext text area
 speechtextFrame = tk.Frame(topFrame)
-speechtextScrollbarX = tk.Scrollbar(speechtextFrame)
 speechtextScrollbarY = tk.Scrollbar(speechtextFrame)
 ft = tkFont.Font(size=15, weight=tkFont.BOLD)
-speechtextEditArea = tk.Text(speechtextFrame, height=3, wrap="word",
-                             xscrollcommand=speechtextScrollbarX.set,
+speechtextEditArea = tk.Text(speechtextFrame, height=8, wrap="word",
                              yscrollcommand=speechtextScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft)
-speechtextScrollbarX.config(command=speechtextEditArea.xview)
-speechtextScrollbarX.pack(side="bottom", fill="x")
+                             borderwidth=0, highlightthickness=0, font=ft, width=50)
 speechtextScrollbarY.config(command=speechtextEditArea.yview)
 speechtextScrollbarY.pack(side="right", fill="y")
 speechtextEditArea.pack(side="left", fill="both", expand=True)
@@ -534,68 +534,68 @@ speechtextFrame.pack()
 
 # Generate middle frame
 midFrame = tk.Frame(appLeftFrame)
-midFrame.grid(row=1, column=0, padx=10, pady=5)
+midFrame.grid(row=1, column=0)
 
 # generate list of original audio
 originAudioFrame = tk.Frame(midFrame)
-originAudioFrame.grid(row=0, column=0, padx=10, pady=5)
+originAudioFrame.grid(row=0, column=0)
 
 label = tk.Label(originAudioFrame, text="Origin Audio List")
 label.pack()
 
 originAudioListBoxFrame = tk.Frame(originAudioFrame)
-originAudioListBoxFrame.pack(padx=10)
+originAudioListBoxFrame.pack()
 
 originAudioListBox = tk.Listbox(
-    originAudioListBoxFrame, selectmode="SINGLE", width=40, exportselection=False)
+    originAudioListBoxFrame, selectmode="SINGLE", width=25, exportselection=False)
 
 originScrollbar = tk.Scrollbar(originAudioListBoxFrame)
-originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5)
+originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
 originAudioListBox.config(yscrollcommand=originScrollbar.set)
 originScrollbar.config(command=originAudioListBox.yview)
 
-originAudioListBox.pack(pady=5)
+originAudioListBox.pack(pady=2)
 
 # generate list of splited audio
 targetAudioFrame = tk.Frame(midFrame)
-targetAudioFrame.grid(row=0, column=1, padx=10, pady=5)
+targetAudioFrame.grid(row=0, column=1, padx=2, pady=2)
 
 # create target audio list
 label = tk.Label(targetAudioFrame, text="Target Audio List")
 label.pack()
 
 targetAudioListBoxFrame = tk.Frame(targetAudioFrame)
-targetAudioListBoxFrame.pack(padx=10)
+targetAudioListBoxFrame.pack(padx=5)
 
 targetAudioListBox = tk.Listbox(
-    targetAudioListBoxFrame, selectmode="SINGLE", width=100, exportselection=False)
+    targetAudioListBoxFrame, selectmode="SINGLE", width=60, exportselection=False)
 
 # - create target audio list scroll bar
 scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
 targetAudioListBox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=targetAudioListBox.yview)
 
-targetAudioListBox.pack(pady=5)
+targetAudioListBox.pack(pady=2)
 
 midFrame.columnconfigure(0, weight=1, minsize=40)
 midFrame.columnconfigure(1, weight=1, minsize=100)
 
 # Generate low frame
 lowFrame = tk.Frame(appLeftFrame)
-lowFrame.grid(row=2, column=0, padx=10, pady=5)
+lowFrame.grid(row=2, column=0)
 
 # create low left frame
 lowLeftFrame = tk.Frame(lowFrame)
-lowLeftFrame.grid(row=0, column=0, padx=10, pady=5)
+lowLeftFrame.grid(row=0, column=0, padx=5, pady=2)
 
 # create low middle frame
 lowMiddleFrame = tk.Frame(lowFrame)
-lowMiddleFrame.grid(row=0, column=1, padx=10, pady=5)
+lowMiddleFrame.grid(row=0, column=1, padx=5, pady=2)
 
 # create low right frame
 lowRightFrame = tk.Frame(lowFrame)
-lowRightFrame.grid(row=0, column=2, padx=10, pady=5)
+lowRightFrame.grid(row=0, column=2, padx=5, pady=2)
 
 lowFrame.columnconfigure(0, weight=1)
 lowFrame.columnconfigure(1, weight=1)
@@ -604,67 +604,63 @@ lowFrame.columnconfigure(2, weight=1)
 # create buttons for left frame
 button_load_splited = tk.Button(
     lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio)
-button_load_splited.pack(pady=5)
+button_load_splited.pack(pady=2)
 
 button_separate_vocal = tk.Button(
     lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals)
-button_separate_vocal.pack(pady=5)
+button_separate_vocal.pack(pady=2)
 
 # create buttons for right frame
 
 button_playtarget = tk.Button(
     lowMiddleFrame, text='Play Target Audio (Enter Key)', command=playTargetAudio)
-button_playtarget.pack(pady=5)
+button_playtarget.pack(pady=2)
 
 button_rec = tk.Button(
     lowMiddleFrame, text='Start/Stop Recording (Space bar)', command=startStopRecording)
-button_rec.pack(pady=5)
+button_rec.pack(pady=2)
 
 button_playboth = tk.Button(
     lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio)
-button_playboth.pack(pady=5)
+button_playboth.pack(pady=2)
 
 button_convert_speechtext = tk.Button(
     lowRightFrame, text='Convert Speech to Text', command=convertSpeechText)
-button_convert_speechtext.pack(pady=5)
+button_convert_speechtext.pack(pady=2)
 
 button_save_speechtext = tk.Button(
     lowRightFrame, text='Save Speech to Text', command=saveSpeechText)
-button_save_speechtext.pack(pady=5)
+button_save_speechtext.pack(pady=2)
 
 button_info_speechtext = tk.Button(
     lowRightFrame, text='Speech Text Info', command=infoSpeechText)
-button_info_speechtext.pack(pady=5)
+button_info_speechtext.pack(pady=2)
 
 combo_repeat = ttk.Combobox(lowRightFrame)
 combo_repeat['values'] = (1, 2, 3, 4, 5)
 combo_repeat.current(0)
-combo_repeat.pack(pady=5)
+combo_repeat.pack(pady=2)
 
 autoPlayNext = tk.IntVar()
 checkbox_autoplay = tk.Checkbutton(
-    lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=5)
+    lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=2)
 
 # Create app right frame
 
 # generate speech info frame
 
 speechinfoFrame = tk.Frame(appRightFrame)
-speechinfoFrame.grid(row=0, column=0, padx=10, pady=5)
+speechinfoFrame.grid(row=0, column=0, padx=5, pady=2)
 
 label = tk.Label(speechinfoFrame, text="Speech Text Info")
 label.pack()
 
 # create speech text info area
-speechinfoScrollbarX = tk.Scrollbar(speechinfoFrame)
 speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
 ft = tkFont.Font(weight=tkFont.BOLD)
-speechinfoEditArea = tk.Text(speechinfoFrame, wrap="word",
-                             xscrollcommand=speechinfoScrollbarX.set,
+speechinfoEditArea = tk.Text(speechinfoFrame, height=30, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft)
-speechinfoScrollbarX.config(command=speechinfoEditArea.xview)
-speechinfoScrollbarX.pack(side="bottom", fill="x")
+                             borderwidth=0, highlightthickness=0, font=ft, width=60)
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
 speechinfoScrollbarY.pack(side="right", fill="y")
 speechinfoEditArea.pack(side="left", fill="both", expand=True)
