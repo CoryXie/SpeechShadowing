@@ -291,7 +291,7 @@ def playthread(filepath):
     repeatPlayCount = int(combo_repeat.get())
     for x in range(repeatPlayCount):
         a.play()
-        time.sleep(int((length * 0.8)))
+        time.sleep(int((length * 0.1)))
     if (autoPlayNext.get() == 1):
         selectedTuple = targetAudioListBox.curselection()
         if (len(selectedTuple) > 0):
@@ -580,7 +580,7 @@ scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
 targetAudioListBox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=targetAudioListBox.yview)
-
+targetAudioListBox.bind('<Double-1>', playTargetAudio)
 targetAudioListBox.pack(pady=2)
 
 midFrame.columnconfigure(0, weight=1, minsize=40)
