@@ -238,7 +238,7 @@ def convertSpeechText(event=None):
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
         else:
-            utils.displayErrorMessage("Select Target Audio First")
+            utils.displayErrorMessage("Select Target Audio First 1")
 
 
 def saveSpeechText(event=None):
@@ -248,11 +248,13 @@ def saveSpeechText(event=None):
         filename = getTargetAudioFileName()
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
+            speechfilepath = os.path.join(
+                currentAudioFolder, foldername + "_speechtext.txt")
             speechTextConfig[foldername][filename] = speechtextEditArea.get(
                 '0.0', tk.END).strip()
-            speechTextConfig.write(open(filepath, "w"))
+            speechTextConfig.write(open(speechfilepath, "w"))
         else:
-            utils.displayErrorMessage("Select Target Audio First")
+            utils.displayErrorMessage("Select Target Audio First 2")
 
 
 def infoSpeechText(event=None):
@@ -276,7 +278,7 @@ def loadSpeechText(event=None):
                 speechtextEditArea.insert(
                     "end-1c", speechTextConfig[foldername][filename])
         else:
-            utils.displayErrorMessage("Select Target Audio First")
+            utils.displayErrorMessage("Select Target Audio First 3")
 
 
 def playthread(filepath):
@@ -311,7 +313,7 @@ def playTargetAudio(event=None):
             playing = threading.Thread(target=playthread, args=(filepath,))
             playing.start()
         else:
-            utils.displayErrorMessage("Select Target Audio First")
+            utils.displayErrorMessage("Select Target Audio First 4")
 
 
 def loadTargetAudio(event=None):
@@ -326,7 +328,6 @@ def loadTargetAudio(event=None):
             filepath = os.path.join(originAudioFolder, foldername)
             currentAudioFolder = filepath
             print("currentAudioFolder " + currentAudioFolder)
-            #foldername = os.path.basename(os.path.normpath(currentAudioFolder))
             speechfilepath = os.path.join(
                 currentAudioFolder, foldername + "_speechtext.txt")
             speechTextConfig = configparser.ConfigParser()
@@ -373,7 +374,7 @@ def startRecording(event=None):
                 recordedAudioFolder, filename), 'wb')
             running.start_recording()
         else:
-            utils.displayErrorMessage("Select Target Audio First")
+            utils.displayErrorMessage("Select Target Audio First 5")
 
 
 def stopRecording(event=None):
@@ -546,7 +547,7 @@ originAudioListBoxFrame = tk.Frame(originAudioFrame)
 originAudioListBoxFrame.pack(padx=10)
 
 originAudioListBox = tk.Listbox(
-    originAudioListBoxFrame, selectmode="SINGLE", width=40)
+    originAudioListBoxFrame, selectmode="SINGLE", width=40, exportselection=False)
 
 originScrollbar = tk.Scrollbar(originAudioListBoxFrame)
 originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5)
@@ -567,7 +568,7 @@ targetAudioListBoxFrame = tk.Frame(targetAudioFrame)
 targetAudioListBoxFrame.pack(padx=10)
 
 targetAudioListBox = tk.Listbox(
-    targetAudioListBoxFrame, selectmode="SINGLE", width=100)
+    targetAudioListBoxFrame, selectmode="SINGLE", width=100, exportselection=False)
 
 # - create target audio list scroll bar
 scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
