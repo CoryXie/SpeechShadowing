@@ -1,3 +1,4 @@
+from fnmatch import translate
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog
@@ -20,6 +21,7 @@ import webbrowser
 import markdown
 import utils
 import SpeechToText
+import TranslateText
 import ichiran
 
 # --- global values ---
@@ -242,7 +244,8 @@ def convertSpeechText(event=None):
                     currentAudioFolder, filename, "config.ini")
                 speechtext = speech.stt()
             else:
-                speechtext = speechTextConfig[currentAudioFolder][filename].strip()
+                speechtext = speechTextConfig[currentAudioFolder][filename].strip(
+                )
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
         else:
@@ -259,6 +262,8 @@ def saveSpeechText(event=None):
             speechfilepath = os.path.join(
                 currentAudioFolder, foldername + "_speechtext.txt")
             speechTextConfig[foldername][filename] = speechtextEditArea.get(
+                '0.0', tk.END).strip()
+            speechTextConfig[foldername + "_zh"][filename] = speechinfoEditArea.get(
                 '0.0', tk.END).strip()
             speechTextConfig.write(open(speechfilepath, "w"))
         else:
@@ -282,17 +287,32 @@ def loadSpeechText(event=None):
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
             speechtextEditArea.delete("1.0", tk.END)
+            speechinfoEditArea.delete("1.0", tk.END)
+            speechtext = ""
             if (speechTextConfig.has_option(foldername, filename) and
                     len(speechTextConfig[foldername][filename].strip()) > 0):
-                speechtextEditArea.insert(
-                    "end-1c", speechTextConfig[foldername][filename])
+                speechtext = speechTextConfig[foldername][filename]
+                speechtextEditArea.insert("end-1c", speechtext)
             elif (autoSTTNext.get() == 1):
                 speech = SpeechToText.SpeechToText(
-                    currentAudioFolder, filename, "config.ini")
+                    currentAudioFolder, filename, cfgfile="config.ini")
                 speechtext = speech.stt().strip()
                 if (len(speechtext) > 0):
                     speechtextEditArea.insert("end-1c", speechtext)
                     speechTextConfig[foldername][filename] = speechtext
+                    speechfilepath = os.path.join(
+                        currentAudioFolder, foldername + "_speechtext.txt")
+                    speechTextConfig.write(open(speechfilepath, "w"))
+            if (speechTextConfig.has_option(foldername + "_zh", filename) and
+                    len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
+                speechinfoEditArea.insert(
+                    "end-1c", speechTextConfig[foldername + "_zh"][filename])
+            elif (len(speechtext) > 0):
+                translater = TranslateText.TranslateText(cfgfile="config.ini")
+                speechtext = translater.translate(speechtext)
+                if (len(speechtext) > 0):
+                    speechinfoEditArea.insert("end-1c", speechtext)
+                    speechTextConfig[foldername + "_zh"][filename] = speechtext
                     speechfilepath = os.path.join(
                         currentAudioFolder, foldername + "_speechtext.txt")
                     speechTextConfig.write(open(speechfilepath, "w"))
@@ -358,6 +378,7 @@ def loadTargetAudio(event=None):
             else:
                 speechTextConfig.add_section("DEFAULT")
                 speechTextConfig.add_section(foldername)
+                speechTextConfig.add_section(foldername + "_zh")
                 speechTextConfig["DEFAULT"]["format"] = fileformat
                 speechTextConfig.write(open(speechfilepath, "w"))
 
