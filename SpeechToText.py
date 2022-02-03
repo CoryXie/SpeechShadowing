@@ -42,6 +42,7 @@ STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
+
 class Ws_Param(object):
     # 初始化
     def __init__(self, APPID, APIKey, APISecret, AudioFile):
@@ -53,7 +54,8 @@ class Ws_Param(object):
         # 公共参数(common)
         self.CommonArgs = {"app_id": self.APPID}
         # 业务参数(business)，更多个性化参数可在官网查看
-        self.BusinessArgs = {"domain": "iat", "language": "ja_jp", "accent": "mandarin", "vinfo":1,"vad_eos":10000}
+        self.BusinessArgs = {"domain": "iat", "language": "ja_jp",
+                             "accent": "mandarin", "vinfo": 1, "vad_eos": 10000}
 
     # 生成url
     def create_url(self):
@@ -69,11 +71,13 @@ class Ws_Param(object):
         # 进行hmac-sha256进行加密
         signature_sha = hmac.new(self.APISecret.encode('utf-8'), signature_origin.encode('utf-8'),
                                  digestmod=hashlib.sha256).digest()
-        signature_sha = base64.b64encode(signature_sha).decode(encoding='utf-8')
+        signature_sha = base64.b64encode(
+            signature_sha).decode(encoding='utf-8')
 
         authorization_origin = "api_key=\"%s\", algorithm=\"%s\", headers=\"%s\", signature=\"%s\"" % (
             self.APIKey, "hmac-sha256", "host date request-line", signature_sha)
-        authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
+        authorization = base64.b64encode(
+            authorization_origin.encode('utf-8')).decode(encoding='utf-8')
         # 将请求的鉴权参数组合为字典
         v = {
             "authorization": authorization,
@@ -87,7 +91,6 @@ class Ws_Param(object):
         # 此处打印出建立连接时候的url,参考本demo的时候可取消上方打印的注释，比对相同参数时生成的url与自己代码生成的url是否一致
         # print('websocket url :', url)
         return url
-
 
 
 class SpeechToText(object):
@@ -107,8 +110,8 @@ class SpeechToText(object):
         print("apisecret=" + apisecret)
         print("apikey=" + apikey)
         self.wsParam = Ws_Param(APPID=appid, APISecret=apisecret,
-                           APIKey=apikey,
-                           AudioFile=self.wave)
+                                APIKey=apikey,
+                                AudioFile=self.wave)
 
     # 收到websocket消息的处理
     def on_message(self, ws, message):
@@ -131,21 +134,21 @@ class SpeechToText(object):
                 # print("sid:%s call success!,data is:%s" % (sid, json.dumps(data, ensure_ascii=False)))
         except Exception as e:
             print("receive msg,but parse exception:", e)
-        
+
     # 收到websocket错误的处理
     def on_error(self, ws, error):
         print("### error:", error)
 
-
     # 收到websocket关闭的处理
+
     def on_close(self, ws, code, msg):
         print("### closed ###")
         if code or msg:
             print("close status code: " + str(code))
             print("close message: " + str(msg))
 
-
     # 收到websocket连接建立的处理
+
     def on_open(self, ws):
         def run(*args):
             frameSize = 8000  # 每一帧的音频大小
@@ -191,22 +194,24 @@ class SpeechToText(object):
 
         thread.start_new_thread(run, ())
 
-
     def mp3_to_wav(self, src, dst):
         # convert mp3 to wav
-        sound = audiosegment.from_file(src).resample(sample_rate_Hz=16000, sample_width=2, channels=1)
+        sound = audiosegment.from_file(src).resample(
+            sample_rate_Hz=16000, sample_width=2, channels=1)
         sound.export(dst, format="wav")
 
-    def save_to_file(self, txt):                                                        
-        sound = audiosegment.from_file(src).resample(sample_rate_Hz=16000, sample_width=2, channels=1)
+    def save_to_file(self, txt):
+        sound = audiosegment.from_file(src).resample(
+            sample_rate_Hz=16000, sample_width=2, channels=1)
         sound.export(dst, format="wav")
 
     def stt(self):
         if not path.exists(self.wave):
             self.mp3_to_wav(self.file, self.wave)
-            websocket.enableTrace(False)
-            wsUrl = self.wsParam.create_url()
-            ws = websocket.WebSocketApp(wsUrl, on_open=self.on_open, on_message=self.on_message, on_error=self.on_error, on_close=self.on_close)
-            ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-            
+        websocket.enableTrace(False)
+        wsUrl = self.wsParam.create_url()
+        ws = websocket.WebSocketApp(
+            wsUrl, on_open=self.on_open, on_message=self.on_message, on_error=self.on_error, on_close=self.on_close)
+        ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
+
         return self.result_txt

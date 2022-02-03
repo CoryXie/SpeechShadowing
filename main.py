@@ -29,6 +29,7 @@ global recordedAudioFolder
 global silenceThreshold
 global repeatPlayCount
 global autoPlayNext
+global autoSTTNext
 
 originAudioFolder = "./TargetAudio"
 currentAudioFolder = ""
@@ -80,8 +81,9 @@ def loadTargetAudioList(folder):
     # loop thru files
     fileList = os.listdir(folder)
     fileList.sort()
+    fileformat = speechTextConfig["DEFAULT"]["format"]
     for file in fileList:
-        if file[len(file) - 4:] in [".wav", ".mp3"]:
+        if file[len(file) - 4:] in [fileformat]:
             displayname = file
             audioFile = AudioFile.audiofile(os.path.join(folder, file))
             length = audioFile.length()
@@ -92,13 +94,13 @@ def loadTargetAudioList(folder):
             else:
                 displaylength = str(math.floor(length % 60)) + " seconds"
             foldername = os.path.basename(os.path.normpath(folder))
-            if (speechTextConfig.has_option(foldername, file)):
+            if (speechTextConfig.has_option(foldername, file) and
+                    len(speechTextConfig[foldername][file].strip()) > 0):
                 displayname += " - " + displaylength + \
                     " [" + speechTextConfig[foldername][file] + "]"
             else:
                 displayname += " - " + displaylength
             targetAudioListBox.insert("end", displayname)
-            print(displayname)
             targetAudioListBox.see(targetAudioListBox.size())
             utils.root.update()
 
@@ -234,9 +236,13 @@ def convertSpeechText(event=None):
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
-            speech = SpeechToText.SpeechToText(
-                currentAudioFolder, filename, "config.ini")
-            speechtext = speech.stt()
+            if (speechTextConfig.has_option(currentAudioFolder, filename) and
+                    len(speechTextConfig[currentAudioFolder][filename].strip()) > 0):
+                speech = SpeechToText.SpeechToText(
+                    currentAudioFolder, filename, "config.ini")
+                speechtext = speech.stt()
+            else:
+                speechtext = speechTextConfig[currentAudioFolder][filename].strip()
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
         else:
@@ -276,15 +282,27 @@ def loadSpeechText(event=None):
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
             speechtextEditArea.delete("1.0", tk.END)
-            if (speechTextConfig.has_option(foldername, filename)):
+            if (speechTextConfig.has_option(foldername, filename) and
+                    len(speechTextConfig[foldername][filename].strip()) > 0):
                 speechtextEditArea.insert(
                     "end-1c", speechTextConfig[foldername][filename])
+            elif (autoSTTNext.get() == 1):
+                speech = SpeechToText.SpeechToText(
+                    currentAudioFolder, filename, "config.ini")
+                speechtext = speech.stt().strip()
+                if (len(speechtext) > 0):
+                    speechtextEditArea.insert("end-1c", speechtext)
+                    speechTextConfig[foldername][filename] = speechtext
+                    speechfilepath = os.path.join(
+                        currentAudioFolder, foldername + "_speechtext.txt")
+                    speechTextConfig.write(open(speechfilepath, "w"))
         else:
             utils.displayErrorMessage("Select Target Audio First 3")
 
 
 def playthread(filepath):
     global repeatPlayCount
+    loadSpeechText()
     a = AudioFile.audiofile(filepath)
     length = a.length()
     print("audio is around " + str(length) + " seconds")
@@ -324,7 +342,9 @@ def loadTargetAudio(event=None):
     if initialChecks():
         filename = getOriginAudioFileName()
         if filename != '':
-            foldername = filename.rsplit(".", 1)[0]
+            pathparts = filename.rsplit(".", 1)
+            foldername = pathparts[0]
+            fileformat = "." + pathparts[1]
             print("loading " + filename)
             print("foldername " + foldername)
             filepath = os.path.join(originAudioFolder, foldername)
@@ -336,7 +356,11 @@ def loadTargetAudio(event=None):
             if (os.path.exists(speechfilepath)):
                 speechTextConfig.read(speechfilepath)
             else:
+                speechTextConfig.add_section("DEFAULT")
                 speechTextConfig.add_section(foldername)
+                speechTextConfig["DEFAULT"]["format"] = fileformat
+                speechTextConfig.write(open(speechfilepath, "w"))
+
             loading = threading.Thread(
                 target=loadTargetAudioList, args=(filepath,))
             loading.start()
@@ -555,9 +579,10 @@ originAudioListBox = tk.Listbox(
 
 originScrollbar = tk.Scrollbar(originAudioListBoxFrame)
 originScrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
-originAudioListBox.config(yscrollcommand=originScrollbar.set)
 originScrollbar.config(command=originAudioListBox.yview)
 
+originAudioListBox.config(yscrollcommand=originScrollbar.set)
+originAudioListBox.bind('<Double-1>', loadTargetAudio)
 originAudioListBox.pack(pady=2)
 
 # generate list of splited audio
@@ -575,11 +600,12 @@ targetAudioListBoxFrame.pack(padx=5)
 targetAudioListBox = tk.Listbox(
     targetAudioListBoxFrame, selectmode="SINGLE", width=60, exportselection=False, bg="#F4F5FF", fg='HotPink1')
 
-# - create target audio list scroll bar
+# create target audio list scroll bar
 scrollbar = tk.Scrollbar(targetAudioListBoxFrame)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=2)
-targetAudioListBox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=targetAudioListBox.yview)
+
+targetAudioListBox.config(yscrollcommand=scrollbar.set)
 targetAudioListBox.bind('<Double-1>', playTargetAudio)
 targetAudioListBox.pack(pady=2)
 
@@ -650,6 +676,10 @@ autoPlayNext = tk.IntVar()
 checkbox_autoplay = tk.Checkbutton(
     lowRightFrame, text="Auto Play", variable=autoPlayNext).pack(pady=2)
 
+autoSTTNext = tk.IntVar()
+checkbox_autoplay = tk.Checkbutton(
+    lowRightFrame, text="Auto STT", variable=autoSTTNext).pack(pady=2)
+
 # Create app right frame
 
 # generate speech info frame
@@ -657,7 +687,8 @@ checkbox_autoplay = tk.Checkbutton(
 speechinfoFrame = tk.Frame(appRightFrame, bg='light sky blue')
 speechinfoFrame.grid(row=0, column=0, padx=5, pady=2)
 
-label = tk.Label(speechinfoFrame, text="Speech Text Meanings", bg="#F4F5FF", fg='Blue2')
+label = tk.Label(speechinfoFrame, text="Speech Text Meanings",
+                 bg="#F4F5FF", fg='Blue2')
 label.pack()
 
 # create speech text info area
@@ -673,6 +704,7 @@ speechinfoEditArea.pack(side="left", fill="both", expand=True)
 # Create keybindings
 utils.root.bind("<Alt_R>", playTargetAudio)
 utils.root.bind("<Control_R>", playBothAudio)
+
 
 def targetAudioSelectionDown(event=None):
     selectedTuple = targetAudioListBox.curselection()
