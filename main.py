@@ -151,6 +151,17 @@ def refreshTargetAudioList():
         loading.start()
 
 
+def splitOriginAudioList(filename):
+    global running
+    global currentAudioFolder
+    if running is not None:
+        utils.displayErrorMessage('recording audio, gotta stop that first')
+    else:
+        audiosplit = audioSplitter.AudioSplitter(
+            originAudioFolder, filename, currentAudioFolder, silencethresh=silenceThreshold)
+        audiosplit.split()
+        loadTargetAudio()
+
 def initialChecks():
     global running
     # general things to do before running events
@@ -222,13 +233,19 @@ def deleteTargetAudio(event=None):
 
 def splitOriginAudio(event=None):
     global silenceThreshold
+    global currentAudioFolder
     if initialChecks():
         filename = getOriginAudioFileName()
         if filename != '':
-            audiosplit = audioSplitter.AudioSplitter(
-                originAudioFolder, filename, silencethresh=silenceThreshold)
-            audiosplit.split()
-            refreshOriginAudioList()
+            pathparts = filename.rsplit(".", 1)
+            foldername = pathparts[0]
+            filepath = os.path.join(originAudioFolder, foldername)
+            currentAudioFolder = filepath
+            if not os.path.exists(currentAudioFolder):
+                os.makedirs(currentAudioFolder)
+            splitting = threading.Thread(
+                target=splitOriginAudioList, args=(filename,))
+            splitting.start()
         else:
             utils.displayErrorMessage('Select Target Audio To Split')
 
@@ -376,7 +393,7 @@ def loadTargetAudio(event=None):
             if (os.path.exists(speechfilepath)):
                 speechTextConfig.read(speechfilepath)
             else:
-                speechTextConfig.add_section("DEFAULT")
+                #speechTextConfig.add_section("DEFAULT")
                 speechTextConfig.add_section(foldername)
                 speechTextConfig.add_section(foldername + "_zh")
                 speechTextConfig["DEFAULT"]["format"] = fileformat

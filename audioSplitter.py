@@ -9,9 +9,10 @@ import utils
 
 class AudioSplitter(object):
 
-    def __init__(self, filedirectory, filename, minsilencelen=1000, silencethresh=-36):
+    def __init__(self, filedirectory, filename, outdirectory, minsilencelen=1000, silencethresh=-36):
         self.filedirectory = filedirectory
         self.filename = filename
+        self.outdirectory = outdirectory
         self.minsilencelen = minsilencelen
         self.silencethresh = silencethresh
         self.silencepaddinglen = 500
@@ -56,7 +57,7 @@ class AudioSplitter(object):
             # Export the audio chunk with new bitrate.
             utils.displayInfoMessage("Exporting {0}-auto-chunk{1}.mp3.".format(self.filename[0:len(self.filename)-4], str(i).zfill(numwidth)))
             normalized_chunk.export(
-                self.filedirectory + "//{0}-auto-chunk{1}.mp3".format(self.filename[0:len(self.filename)-4], str(i).zfill(numwidth)),
+                self.outdirectory + "//{0}-auto-chunk{1}.mp3".format(self.filename[0:len(self.filename)-4], str(i).zfill(numwidth)),
                 bitrate = "192k",
                 format = "mp3"
             )
