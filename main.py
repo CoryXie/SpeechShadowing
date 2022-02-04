@@ -162,6 +162,7 @@ def splitOriginAudioList(filename):
         audiosplit.split()
         loadTargetAudio()
 
+
 def initialChecks():
     global running
     # general things to do before running events
@@ -198,20 +199,33 @@ def uploadTargetAudio(event=None):
             refreshOriginAudioList()
 
 
-def splitAudio(filename):
-    print(filename)
-    separator = Separator('spleeter:2stems')
-    separator.separate_to_file(filename, originAudioFolder)
+def separateAudio(filename):
+    global currentAudioFolder
+    global silenceThreshold
+    print("Separating " + filename)
+    audiosplit = audioSplitter.AudioSplitter(
+        originAudioFolder, filename, currentAudioFolder, silencethresh=silenceThreshold)
+    audiosplit.splitVocals()
+    loadTargetAudio()
 
 
 def separateAudioVocals(event=None):
+    global silenceThreshold
+    global currentAudioFolder
     if initialChecks():
-        filenames = filedialog.askopenfilenames(
-            title="Select Target Audio", filetypes=[("Audio Files", ".mp3 .wav")])
-        for filename in filenames:
-            # Using embedded configuration.
-            splitting = threading.Thread(target=splitAudio, args=(filename,))
-            splitting.start()
+        filename = getOriginAudioFileName()
+        if filename != '':
+            pathparts = filename.rsplit(".", 1)
+            foldername = pathparts[0]
+            filepath = os.path.join(originAudioFolder, foldername)
+            currentAudioFolder = filepath
+            if not os.path.exists(currentAudioFolder):
+                os.makedirs(currentAudioFolder)
+            separating = threading.Thread(
+                target=separateAudio, args=(filename,))
+            separating.start()
+        else:
+            utils.displayErrorMessage('Select Origin Audio To Split')
 
 
 def deleteOriginAudio(event=None):
@@ -255,16 +269,31 @@ def convertSpeechText(event=None):
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
-            if (speechTextConfig.has_option(currentAudioFolder, filename) and
-                    len(speechTextConfig[currentAudioFolder][filename].strip()) > 0):
+            foldername = currentAudioFolder
+            wavename = filename.rsplit(".", 1)[0] + ".wav"
+            if (speechTextConfig.has_option(foldername, filename) and
+                    len(speechTextConfig[foldername][filename].strip()) > 0):
                 speech = SpeechToText.SpeechToText(
-                    currentAudioFolder, filename, "config.ini")
+                    foldername, wavename, "config.ini")
                 speechtext = speech.stt()
             else:
                 speechtext = speechTextConfig[currentAudioFolder][filename].strip(
                 )
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
+            if (speechTextConfig.has_option(foldername + "_zh", filename) and
+                    len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
+                speechinfoEditArea.insert(
+                    "end-1c", speechTextConfig[foldername + "_zh"][filename])
+            elif (len(speechtext) > 0):
+                translater = TranslateText.TranslateText(cfgfile="config.ini")
+                speechtext = translater.translate(speechtext)
+                if (len(speechtext) > 0):
+                    speechinfoEditArea.insert("end-1c", speechtext)
+                    speechTextConfig[foldername + "_zh"][filename] = speechtext
+                    speechfilepath = os.path.join(
+                        currentAudioFolder, foldername + "_speechtext.txt")
+                    speechTextConfig.write(open(speechfilepath, "w"))
         else:
             utils.displayErrorMessage("Select Target Audio First 1")
 
@@ -303,6 +332,7 @@ def loadSpeechText(event=None):
         filename = getTargetAudioFileName()
         if filename != '':
             foldername = os.path.basename(os.path.normpath(currentAudioFolder))
+            wavename = filename.rsplit(".", 1)[0] + ".wav"
             speechtextEditArea.delete("1.0", tk.END)
             speechinfoEditArea.delete("1.0", tk.END)
             speechtext = ""
@@ -312,7 +342,7 @@ def loadSpeechText(event=None):
                 speechtextEditArea.insert("end-1c", speechtext)
             elif (autoSTTNext.get() == 1):
                 speech = SpeechToText.SpeechToText(
-                    currentAudioFolder, filename, cfgfile="config.ini")
+                    currentAudioFolder, wavename, cfgfile="config.ini")
                 speechtext = speech.stt().strip()
                 if (len(speechtext) > 0):
                     speechtextEditArea.insert("end-1c", speechtext)
@@ -393,7 +423,7 @@ def loadTargetAudio(event=None):
             if (os.path.exists(speechfilepath)):
                 speechTextConfig.read(speechfilepath)
             else:
-                #speechTextConfig.add_section("DEFAULT")
+                # speechTextConfig.add_section("DEFAULT")
                 speechTextConfig.add_section(foldername)
                 speechTextConfig.add_section(foldername + "_zh")
                 speechTextConfig["DEFAULT"]["format"] = fileformat
@@ -536,10 +566,6 @@ utils.root.title("Speech Shadowing App")
 menubar = tk.Menu(utils.root)
 filemenu = tk.Menu(menubar, tearoff=0)
 filemenu.add_command(label="Upload Origin Audio", command=uploadTargetAudio)
-filemenu.add_command(
-    label="Separate Vocals from Origin Audio", command=separateAudioVocals)
-filemenu.add_command(label="Split Origin Audio on Silences",
-                     command=splitOriginAudio)
 filemenu.add_command(label="Delete Selected Target Audio",
                      command=deleteTargetAudio)
 filemenu.add_command(label="Update Silence Threshold",
@@ -672,11 +698,15 @@ lowFrame.columnconfigure(2, weight=1)
 
 # create buttons for left frame
 button_load_splited = tk.Button(
-    lowLeftFrame, text='Load Splited Audio for Selected Origin Audio', command=loadTargetAudio, width=35)
+    lowLeftFrame, text='Load Splited Audio for Origin Audio', command=loadTargetAudio, width=35)
 button_load_splited.pack(pady=2)
 
 button_separate_vocal = tk.Button(
-    lowLeftFrame, text='Separate Vocals from Selected Origin Audio', command=separateAudioVocals, width=35)
+    lowLeftFrame, text='Split Origin Audio (no Vocal Separation)', command=splitOriginAudio, width=35)
+button_separate_vocal.pack(pady=2)
+
+button_separate_vocal = tk.Button(
+    lowLeftFrame, text='Split Origin Audio (with Vocal Separation)', command=separateAudioVocals, width=35)
 button_separate_vocal.pack(pady=2)
 
 # create buttons for right frame

@@ -96,8 +96,7 @@ class Ws_Param(object):
 class SpeechToText(object):
     def __init__(self, folder, file, cfgfile):
         self.folder = folder
-        self.file = path.join(self.folder, file)
-        self.wave = path.join(self.folder, file + ".wav")
+        self.wave = path.join(self.folder, file)
         self.result_txt = ""
         # See https://docs.python.org/3/library/configparser.html
         config = configparser.ConfigParser()
@@ -200,14 +199,7 @@ class SpeechToText(object):
             sample_rate_Hz=16000, sample_width=2, channels=1)
         sound.export(dst, format="wav")
 
-    def save_to_file(self, txt):
-        sound = audiosegment.from_file(src).resample(
-            sample_rate_Hz=16000, sample_width=2, channels=1)
-        sound.export(dst, format="wav")
-
     def stt(self):
-        if not path.exists(self.wave):
-            self.mp3_to_wav(self.file, self.wave)
         websocket.enableTrace(False)
         wsUrl = self.wsParam.create_url()
         ws = websocket.WebSocketApp(
