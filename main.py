@@ -4,7 +4,6 @@ import tkinter.ttk as ttk
 from tkinter import filedialog
 from turtle import width
 from spleeter.separator import Separator
-from tkhtmlview import HTMLScrolledText
 import tkinter.font as tkFont
 import recorder
 import AudioFile
@@ -366,16 +365,37 @@ def loadSpeechText(event=None):
         else:
             utils.displayErrorMessage("Select Target Audio First 3")
 
-
+def playing_update():
+    global playingSeconds
+    global playing_timer
+    global totalSeconds
+    playingSeconds += 1
+    update_value = ((100 * playingSeconds) / totalSeconds)
+    playingProgressbar["value"] = update_value
+    if (playingSeconds == totalSeconds):
+        playing_timer.cancel()
+    else:
+        playing_timer = threading.Timer(1, playing_update)
+        playing_timer.start()
+    
 def playthread(filepath):
     global repeatPlayCount
+    global playingSeconds
+    global totalSeconds
+    global playing_timer
     loadSpeechText()
     a = AudioFile.audiofile(filepath)
     length = a.length()
     print("audio is around " + str(length) + " seconds")
     repeatPlayCount = int(combo_repeat.get())
     for x in range(repeatPlayCount):
+        playingProgressbar["value"] = 0
+        playingSeconds = 0
+        totalSeconds = int(a.length())
+        playing_timer = threading.Timer(1, playing_update)
+        playing_timer.start()
         a.play()
+        playingProgressbar["value"] = 0
         time.sleep(int((length * 0.1)))
     if (autoPlayNext.get() == 1):
         selectedTuple = targetAudioListBox.curselection()
@@ -590,8 +610,8 @@ appLeftFrame.grid(row=0, column=0, padx=5, pady=5)
 appRightFrame = tk.Frame(utils.root, bg='light sky blue')
 appRightFrame.grid(row=0, column=1, padx=5, pady=5)
 
-utils.root.columnconfigure(0, weight=1)
-utils.root.columnconfigure(1, weight=3)
+utils.root.columnconfigure(0, weight=3)
+utils.root.columnconfigure(1, weight=1)
 
 # Generate top frame
 topFrame = tk.Frame(appLeftFrame, bg='light sky blue')
@@ -615,13 +635,20 @@ error.pack()
 speechtextFrame = tk.Frame(topFrame, bg='light sky blue')
 speechtextScrollbarY = tk.Scrollbar(speechtextFrame)
 ft = tkFont.Font(size=15, weight=tkFont.BOLD)
-speechtextEditArea = tk.Text(speechtextFrame, height=8, wrap="word",
+speechtextEditArea = tk.Text(speechtextFrame, height=7, wrap="word",
                              yscrollcommand=speechtextScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft, width=50, bg="#F4F5FF", fg='magenta2')
+                             borderwidth=0, highlightthickness=0,
+                             maxundo=5, font=ft, width=50,
+                             bg="#F4F5FF", fg='magenta2')
 speechtextScrollbarY.config(command=speechtextEditArea.yview)
 speechtextScrollbarY.pack(side="right", fill="y")
 speechtextEditArea.pack(side="left", fill="both", expand=True)
 speechtextFrame.pack()
+
+playingProgressbar = ttk.Progressbar(topFrame, orient=tk.HORIZONTAL,
+                                     length=300, mode='determinate')
+playingProgressbar["value"] = 0
+playingProgressbar.pack()
 
 # Generate middle frame
 midFrame = tk.Frame(appLeftFrame, bg='light sky blue')
@@ -762,9 +789,9 @@ label.pack()
 # create speech text info area
 speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
 ft = tkFont.Font(family="Courier New")
-speechinfoEditArea = tk.Text(speechinfoFrame, height=30, wrap="word",
+speechinfoEditArea = tk.Text(speechinfoFrame, height=27, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft, width=60, bg="#F4F5FF", fg='HotPink1')
+                             borderwidth=0, highlightthickness=0, font=ft, width=50, bg="#F4F5FF", fg='HotPink1')
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
 speechinfoScrollbarY.pack(side="right", fill="y")
 speechinfoEditArea.pack(side="left", fill="both", expand=True)

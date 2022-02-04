@@ -58,11 +58,11 @@ class AudioSplitter(object):
             normalized_chunk = self.match_target_amplitude(audio_chunk, -20.0)
 
             # Export the audio chunk with new bitrate.
-            mp3path = self.outdirectory + "//{0}-auto-chunk{1}.mp3".format(
+            mp3path = self.outdirectory + "//{0}-chunk{1}.mp3".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            wavpath = self.outdirectory + "//{0}-auto-chunk{1}.wav".format(
+            wavpath = self.outdirectory + "//{0}-chunk{1}.wav".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            display = "{0}-auto-chunk{1}.mp3".format(
+            display = "{0}-chunk{1}.mp3".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
 
             utils.displayInfoMessage("Exporting " + display)
@@ -119,11 +119,11 @@ class AudioSplitter(object):
             end = mlist[i]
 
             # Export the audio chunk with new bitrate.
-            mp3path = self.outdirectory + "//{0}-auto-chunk{1}.mp3".format(
+            mp3path = self.outdirectory + "//{0}-chunk{1}.mp3".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            wavpath = self.outdirectory + "//{0}-auto-chunk{1}.wav".format(
+            wavpath = self.outdirectory + "//{0}-chunk{1}.wav".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            display = "{0}-auto-chunk{1}.mp3".format(
+            display = "{0}-chunk{1}.mp3".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
 
             utils.displayInfoMessage("Exporting " + display)
