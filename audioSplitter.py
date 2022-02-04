@@ -2,7 +2,7 @@
 # split_on_silence function for separating out silent chunks.
 # code taken from https://stackoverflow.com/a/46001755 and modified for use here
 from pydub import AudioSegment
-from pydub.silence import split_on_silence, detect_silence
+from pydub.silence import split_on_silence, detect_nonsilent
 from spleeter.separator import Separator
 import os
 import utils
@@ -10,13 +10,14 @@ import utils
 
 class AudioSplitter(object):
 
-    def __init__(self, filedirectory, filename, outdirectory, minsilencelen=1000, silencethresh=-36):
+    def __init__(self, filedirectory, filename, outdirectory, minsilencelen=1000, silencethresh=-36, minchunklen=3000):
         self.filedirectory = filedirectory
         self.filename = filename
         self.outdirectory = outdirectory
         self.minsilencelen = minsilencelen
         self.silencethresh = silencethresh
         self.silencepaddinglen = 500
+        self.minchunklen = minchunklen
 
     # Define a function to normalize a chunk to a target amplitude.
     def match_target_amplitude(self, aChunk, target_dBFS):
@@ -67,8 +68,7 @@ class AudioSplitter(object):
 
             utils.displayInfoMessage("Exporting " + display)
             normalized_chunk.export(mp3path, format="mp3")
-            normalized_chunk = normalized_chunk.set_sample_width(
-                2).set_frame_rate(16000).set_channels(1)
+            normalized_chunk = normalized_chunk.set_sample_width(2).set_frame_rate(16000).set_channels(1)
             normalized_chunk.export(wavpath, format="wav")
 
         utils.displayInfoMessage("Splitting Complete!")
@@ -91,33 +91,31 @@ class AudioSplitter(object):
 
         # Split track where the silence is the min silence length or more and get chunks using
         # the imported function.
-        chunks = detect_silence(vocals, min_silence_len=self.minsilencelen,
+        chunks = detect_nonsilent(vocals, min_silence_len=self.minsilencelen,
                                 silence_thresh=self.silencethresh, seek_step=1)
 
         numwidth = len(str(len(chunks)))
         numchunks = len(chunks)
 
-        mlist = []
-
-        for i in range(numchunks):
-            if i == (numchunks - 1):
-                data = chunks[i][1]
-            else:
-                data = chunks[i][1] - self.silencepaddinglen
-            mlist.append(data)
-
         # Make it friendly for STT
-        vocals = vocals.set_sample_width(
-            2).set_frame_rate(16000).set_channels(1)
+        vocals = vocals.set_sample_width(2).set_frame_rate(16000).set_channels(1)
 
         # Process each chunk with your parameters
         for i in range(numchunks):
-            if i == 0:
-                start = 0
-            else:
-                start = mlist[i - 1]
-            end = mlist[i]
 
+            start = chunks[i][0]
+            end = chunks[i][1]
+            
+            if (start > self.silencepaddinglen):
+                start = start - self.silencepaddinglen
+            
+            end += self.silencepaddinglen
+            
+            chunklen = end - start
+            
+            if (chunklen < self.minchunklen):
+                continue
+            
             # Export the audio chunk with new bitrate.
             mp3path = self.outdirectory + "//{0}-chunk{1}.mp3".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))

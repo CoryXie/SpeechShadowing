@@ -158,10 +158,12 @@ def splitOriginAudioList(filename):
     else:
         silenceThreshold = int(combo_min_silence_threshold.get())
         silenceLength = int(combo_min_silence_length.get())
+        vocalLength = int(combo_min_vocal_length.get())
         audiosplit = audioSplitter.AudioSplitter(
             originAudioFolder, filename, currentAudioFolder,
             minsilencelen=silenceLength,
-            silencethresh=silenceThreshold)
+            silencethresh=silenceThreshold,
+            minchunklen=vocalLength)
         audiosplit.split()
         loadTargetAudio()
 
@@ -208,10 +210,12 @@ def separateAudio(filename):
     print("Separating " + filename)
     silenceThreshold = int(combo_min_silence_threshold.get())
     silenceLength = int(combo_min_silence_length.get())
+    vocalLength = int(combo_min_vocal_length.get())
     audiosplit = audioSplitter.AudioSplitter(
         originAudioFolder, filename, currentAudioFolder,
         minsilencelen=silenceLength,
-        silencethresh=silenceThreshold)
+        silencethresh=silenceThreshold,
+        minchunklen=vocalLength)
     audiosplit.splitVocals()
     loadTargetAudio()
 
@@ -406,7 +410,8 @@ def playthread(filepath):
         playing_timer.start()
         a.play()
         playingProgressbar["value"] = 0
-        time.sleep(int((length * 0.1)))
+        if (autoPlayNext.get() != 1):
+            time.sleep(int((length * 0.1)))
     if (autoPlayNext.get() == 1):
         selectedTuple = targetAudioListBox.curselection()
         if (len(selectedTuple) > 0):
@@ -749,7 +754,7 @@ button_separate_vocal.pack(pady=2)
 lowLeftSilenceLengthCombonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
 lowLeftSilenceLengthCombonFrame.pack()
 
-label = tk.Label(lowLeftSilenceLengthCombonFrame, text="Min Slience Length (ms)",
+label = tk.Label(lowLeftSilenceLengthCombonFrame, text="Min Slience (ms)",
                  bg='light sky blue')
 label.grid(row=0, column=0)
 combo_min_silence_length = ttk.Combobox(
@@ -758,6 +763,15 @@ combo_min_silence_length['values'] = (
     200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000)
 combo_min_silence_length.current(4)
 combo_min_silence_length.grid(row=0, column=1)
+
+label = tk.Label(lowLeftSilenceLengthCombonFrame, text="Min Vocal (ms)",
+                 bg='light sky blue')
+label.grid(row=0, column=2)
+combo_min_vocal_length = ttk.Combobox(
+    lowLeftSilenceLengthCombonFrame, width=5)
+combo_min_vocal_length['values'] = (1000, 1500, 2000, 2500, 3000, 3500, 4000)
+combo_min_vocal_length.current(4)
+combo_min_vocal_length.grid(row=0, column=3)
 
 lowLeftSilenceThresholdCombonFrame = tk.Frame(
     lowLeftFrame, bg='light sky blue')
@@ -833,7 +847,7 @@ speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
 ft = tkFont.Font(family="Courier New")
 speechinfoEditArea = tk.Text(speechinfoFrame, height=27, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, font=ft, width=50, bg="#F4F5FF", fg='HotPink1')
+                             borderwidth=0, highlightthickness=0, font=ft, width=45, bg="#F4F5FF", fg='HotPink1')
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
 speechinfoScrollbarY.pack(side="right", fill="y")
 speechinfoEditArea.pack(side="left", fill="both", expand=True)
