@@ -156,8 +156,12 @@ def splitOriginAudioList(filename):
     if running is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
+        silenceThreshold = int(combo_min_silence_threshold.get())
+        silenceLength = int(combo_min_silence_length.get())
         audiosplit = audioSplitter.AudioSplitter(
-            originAudioFolder, filename, currentAudioFolder, silencethresh=silenceThreshold)
+            originAudioFolder, filename, currentAudioFolder,
+            minsilencelen=silenceLength,
+            silencethresh=silenceThreshold)
         audiosplit.split()
         loadTargetAudio()
 
@@ -202,8 +206,12 @@ def separateAudio(filename):
     global currentAudioFolder
     global silenceThreshold
     print("Separating " + filename)
+    silenceThreshold = int(combo_min_silence_threshold.get())
+    silenceLength = int(combo_min_silence_length.get())
     audiosplit = audioSplitter.AudioSplitter(
-        originAudioFolder, filename, currentAudioFolder, silencethresh=silenceThreshold)
+        originAudioFolder, filename, currentAudioFolder,
+        minsilencelen=silenceLength,
+        silencethresh=silenceThreshold)
     audiosplit.splitVocals()
     loadTargetAudio()
 
@@ -365,6 +373,7 @@ def loadSpeechText(event=None):
         else:
             utils.displayErrorMessage("Select Target Audio First 3")
 
+
 def playing_update():
     global playingSeconds
     global playing_timer
@@ -377,7 +386,8 @@ def playing_update():
     else:
         playing_timer = threading.Timer(1, playing_update)
         playing_timer.start()
-    
+
+
 def playthread(filepath):
     global repeatPlayCount
     global playingSeconds
@@ -578,8 +588,8 @@ running = None
 utils.root = tk.Tk()
 width = utils.root .winfo_screenwidth()
 height = utils.root .winfo_screenheight()
-utils.root.geometry("%dx%d" % (width, height))
-
+utils.root.geometry("%dx%d+0+0" % (width, height))
+utils.root.state('zoomed')
 utils.root.title("Speech Shadowing App")
 
 # Create menu bar
@@ -736,6 +746,32 @@ button_separate_vocal = tk.Button(
     lowLeftFrame, text='Split Origin Audio (with Vocal Separation)', command=separateAudioVocals, width=35)
 button_separate_vocal.pack(pady=2)
 
+lowLeftSilenceLengthCombonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
+lowLeftSilenceLengthCombonFrame.pack()
+
+label = tk.Label(lowLeftSilenceLengthCombonFrame, text="Min Slience Length (ms)",
+                 bg='light sky blue')
+label.grid(row=0, column=0)
+combo_min_silence_length = ttk.Combobox(
+    lowLeftSilenceLengthCombonFrame, width=5)
+combo_min_silence_length['values'] = (
+    200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000)
+combo_min_silence_length.current(4)
+combo_min_silence_length.grid(row=0, column=1)
+
+lowLeftSilenceThresholdCombonFrame = tk.Frame(
+    lowLeftFrame, bg='light sky blue')
+lowLeftSilenceThresholdCombonFrame.pack()
+
+label = tk.Label(lowLeftSilenceThresholdCombonFrame, text="Min Slience Threshold (dBFS)",
+                 bg='light sky blue')
+label.grid(row=0, column=0)
+combo_min_silence_threshold = ttk.Combobox(
+    lowLeftSilenceThresholdCombonFrame, width=5)
+combo_min_silence_threshold['values'] = (-36, -26, -16)
+combo_min_silence_threshold.current(0)
+combo_min_silence_threshold.grid(row=0, column=1)
+
 # create buttons for right frame
 
 button_playtarget = tk.Button(
@@ -762,10 +798,16 @@ button_info_speechtext = tk.Button(
     lowRightFrame, text='Speech Text Meanings', command=infoSpeechText, width=20)
 button_info_speechtext.pack(pady=2)
 
-combo_repeat = ttk.Combobox(lowRightFrame)
+lowRightRepeatCombonFrame = tk.Frame(lowRightFrame, bg='light sky blue')
+lowRightRepeatCombonFrame.pack()
+
+label = tk.Label(lowRightRepeatCombonFrame, text="Repeat Times",
+                 bg='light sky blue')
+label.grid(row=0, column=0)
+combo_repeat = ttk.Combobox(lowRightRepeatCombonFrame, width=5)
 combo_repeat['values'] = (1, 2, 3, 4, 5)
 combo_repeat.current(0)
-combo_repeat.pack(pady=2)
+combo_repeat.grid(row=0, column=1)
 
 autoPlayNext = tk.IntVar()
 checkbox_autoplay = tk.Checkbutton(
