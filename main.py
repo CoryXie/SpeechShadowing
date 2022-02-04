@@ -291,6 +291,23 @@ def convertSpeechText(event=None):
                 speechtext = speech.stt()
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
+            
+            if (len(speechtext)):
+                item = targetAudioListBox.curselection()[0]
+                targetAudioListBox.delete(item)
+                displayname = filename
+                audioFile = AudioFile.audiofile(
+                    os.path.join(currentAudioFolder, filename))
+                length = audioFile.length()
+                displaylength = ""
+                if length > 60:
+                    displaylength = str(math.floor(length/60)) + \
+                        ":" + str(math.floor(length % 60)).zfill(2)
+                else:
+                    displaylength = str(math.floor(length % 60)) + " seconds"
+                displayname += " - " + displaylength + " [" + speechtext + "]"
+                targetAudioListBox.insert(item, displayname)
+    
             if (speechTextConfig.has_option(foldername + "_zh", filename) and
                     len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
                 speechinfoEditArea.insert(
@@ -360,6 +377,23 @@ def loadSpeechText(event=None):
                     speechfilepath = os.path.join(
                         currentAudioFolder, foldername + "_speechtext.txt")
                     speechTextConfig.write(open(speechfilepath, "w"))
+                    
+                    if (len(speechtext)):
+                        item = targetAudioListBox.curselection()[0]
+                        targetAudioListBox.delete(item)
+                        displayname = filename
+                        audioFile = AudioFile.audiofile(
+                            os.path.join(currentAudioFolder, filename))
+                        length = audioFile.length()
+                        displaylength = ""
+                        if length > 60:
+                            displaylength = str(math.floor(length/60)) + \
+                                ":" + str(math.floor(length % 60)).zfill(2)
+                        else:
+                            displaylength = str(math.floor(length % 60)) + " seconds"
+                        displayname += " - " + displaylength + " [" + speechtext + "]"
+                        targetAudioListBox.insert(item, displayname)
+                
             if (speechTextConfig.has_option(foldername + "_zh", filename) and
                     len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
                 speechinfoEditArea.insert(
