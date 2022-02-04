@@ -280,16 +280,15 @@ def convertSpeechText(event=None):
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
-            foldername = currentAudioFolder
+            foldername = os.path.basename(os.path.normpath(currentAudioFolder))
             wavename = filename.rsplit(".", 1)[0] + ".wav"
             if (speechTextConfig.has_option(foldername, filename) and
                     len(speechTextConfig[foldername][filename].strip()) > 0):
-                speech = SpeechToText.SpeechToText(
-                    foldername, wavename, "config.ini")
-                speechtext = speech.stt()
+                speechtext = speechTextConfig[foldername][filename].strip()
             else:
-                speechtext = speechTextConfig[currentAudioFolder][filename].strip(
-                )
+                speech = SpeechToText.SpeechToText(
+                    currentAudioFolder, wavename, "config.ini")
+                speechtext = speech.stt()
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
             if (speechTextConfig.has_option(foldername + "_zh", filename) and

@@ -16,7 +16,7 @@ class AudioSplitter(object):
         self.outdirectory = outdirectory
         self.minsilencelen = minsilencelen
         self.silencethresh = silencethresh
-        self.silencepaddinglen = 500
+        self.silencepaddinglen = 250
         self.minchunklen = minchunklen
 
     # Define a function to normalize a chunk to a target amplitude.
