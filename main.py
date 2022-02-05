@@ -19,6 +19,7 @@ import markdown
 import webbrowser
 import markdown
 import utils
+import pyttsx3
 import SpeechToText
 import TranslateText
 import ichiran
@@ -31,6 +32,7 @@ global silenceThreshold
 global repeatPlayCount
 global autoPlayNext
 global autoSTTNext
+global ttsEngine
 
 originAudioFolder = "./TargetAudio"
 currentAudioFolder = ""
@@ -470,6 +472,25 @@ def playTargetAudio(event=None):
         else:
             utils.displayErrorMessage("Select Target Audio First 4")
 
+def playTTSthread():
+    language = str(combo_tts_language.get())
+    ttsname = language.rsplit("-", 1)[0].strip()
+    voices = ttsEngine.getProperty('voices')
+    for voice in voices:
+        if (voice.name.find(ttsname) > 0):
+            ttsEngine.setProperty("voice", voice.id)
+    speechtext = speechtextEditArea.get('0.0', tk.END).strip()
+    print("Speaking " + language + " [" + speechtext + "]")
+    ttsEngine.say(speechtext)
+    ttsEngine.runAndWait()
+    ttsEngine.stop()
+    print("Speaking done")
+
+def playTTSAudio(event=None):
+    print("playTTSAudio")
+    if initialChecks():
+        playing = threading.Thread(target=playTTSthread, args=())
+        playing.start()
 
 def loadTargetAudio(event=None):
     global currentAudioFolder
@@ -822,8 +843,12 @@ combo_min_silence_threshold.grid(row=0, column=1)
 # create buttons for right frame
 
 button_playtarget = tk.Button(
-    lowMiddleFrame, text='Play Target Audio (Left Alt Key)', command=playTargetAudio, width=25)
+    lowMiddleFrame, text='Play Target Audio (Right Alt Key)', command=playTargetAudio, width=25)
 button_playtarget.pack(pady=2)
+
+button_playtts = tk.Button(
+    lowMiddleFrame, text='Play TTS Audio (Left Alt Key)', command=playTTSAudio, width=25)
+button_playtts.pack(pady=2)
 
 button_rec = tk.Button(
     lowMiddleFrame, text='Toggle Recording (Right Shift Key)', command=startStopRecording, width=25)
@@ -832,6 +857,19 @@ button_rec.pack(pady=2)
 button_playboth = tk.Button(
     lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio, width=25)
 button_playboth.pack(pady=2)
+
+lowMiddleTTSCombonFrame = tk.Frame(lowMiddleFrame, bg='light sky blue')
+lowMiddleTTSCombonFrame.pack()
+
+label = tk.Label(lowMiddleTTSCombonFrame, text="TTS Language",
+                 bg='light sky blue')
+label.grid(row=0, column=0)
+combo_tts_language = ttk.Combobox(
+    lowMiddleTTSCombonFrame, width=14)
+combo_tts_language['values'] = (
+    "David - English", "Zira - English", "Haruka - Japanese", "Huihui - Chinese")
+combo_tts_language.current(2)
+combo_tts_language.grid(row=0, column=1)
 
 button_convert_speechtext = tk.Button(
     lowRightFrame, text='Convert Speech to Text', command=convertSpeechText, width=20)
@@ -887,6 +925,7 @@ speechinfoEditArea.pack(side="left", fill="both", expand=True)
 
 # Create keybindings
 utils.root.bind("<Alt_R>", playTargetAudio)
+utils.root.bind("<Alt_L>", playTTSAudio)
 utils.root.bind("<Control_R>", playBothAudio)
 
 
@@ -925,7 +964,8 @@ utils.root.bind("<Up>", targetAudioSelectionUp)
 utils.root.bind("<Left>", targetAudioSelectionUp)
 utils.root.bind("<Shift_R>", startStopRecording)
 targetAudioListBox.bind("<<ListboxSelect>>", loadSpeechText)
-
+ttsEngine = pyttsx3.init("sapi5") # object creation
+  
 if __name__ == '__main__':
     # -- load target audio initially. Set info message also has a bonus that it'll start
     # the GUI before the targetAudio list has completed
