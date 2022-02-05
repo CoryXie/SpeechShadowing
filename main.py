@@ -19,6 +19,8 @@ import markdown
 import webbrowser
 import markdown
 import utils
+from PIL import ImageGrab
+from manga_ocr import MangaOcr
 import pyttsx3
 import SpeechToText
 import TranslateText
@@ -33,6 +35,7 @@ global repeatPlayCount
 global autoPlayNext
 global autoSTTNext
 global ttsEngine
+global mangaOCR
 
 originAudioFolder = "./TargetAudio"
 currentAudioFolder = ""
@@ -526,8 +529,13 @@ def loadTargetAudio(event=None):
         else:
             utils.displayErrorMessage("Select Origin Audio First")
 
-# -- Recorded Audio Events --
+def getMangaOCRText(event=None):
+    img = ImageGrab.grabclipboard()
+    text = mangaOCR(img)
+    speechtextEditArea.delete("1.0", tk.END)
+    speechtextEditArea.insert("end-1c", text)
 
+# -- Recorded Audio Events --
 
 def playRecordedAudio(event=None):
     if initialChecks():
@@ -807,6 +815,10 @@ button_separate_vocal = tk.Button(
     lowLeftFrame, text='Split Origin Audio (with Vocal Separation)', command=separateAudioVocals, width=35)
 button_separate_vocal.pack(pady=2)
 
+button_manga_ocr = tk.Button(
+    lowLeftFrame, text='Get Manga OCR Text', command=getMangaOCRText, width=35)
+button_manga_ocr.pack(pady=2)
+
 lowLeftSilenceLengthCombonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
 lowLeftSilenceLengthCombonFrame.pack()
 
@@ -979,6 +991,7 @@ utils.root.bind("<Left>", targetAudioSelectionUp)
 utils.root.bind("<Shift_R>", startStopRecording)
 targetAudioListBox.bind("<<ListboxSelect>>", loadSpeechText)
 ttsEngine = pyttsx3.init("sapi5") # object creation
+mangaOCR = MangaOcr()
   
 if __name__ == '__main__':
     # -- load target audio initially. Set info message also has a bonus that it'll start
