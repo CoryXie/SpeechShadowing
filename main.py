@@ -1,9 +1,9 @@
 from fnmatch import translate
+import io
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog
 from turtle import width
-from spleeter.separator import Separator
 import tkinter.font as tkFont
 import recorder
 import AudioFile
@@ -19,9 +19,10 @@ import markdown
 import webbrowser
 import markdown
 import utils
-from PIL import ImageGrab
+from PIL import ImageGrab, ImageTk, Image
 from manga_ocr import MangaOcr
 import pyttsx3
+import PyPDF2
 import SpeechToText
 import TranslateText
 import ichiran
@@ -42,6 +43,7 @@ currentAudioFolder = ""
 recordedAudioFolder = "./RecordedAudio"
 silenceThreshold = -36
 repeatPlayCount = 1
+mangaOCR = None
 
 # --- functions ---
 
@@ -131,8 +133,17 @@ def loadOriginAudioList():
                 displaylength = str(math.floor(length % 60)) + " seconds"
             displayname += " - " + displaylength
             originAudioListBox.insert("end", displayname)
-            originAudioListBox.see(targetAudioListBox.size())
-            utils.root.update()
+            originAudioListBox.see(originAudioListBox.size())
+            # utils.root.update()
+        elif file[len(file) - 4:] in [".pdf"]:
+            filepath = os.path.join(originAudioFolder, file)
+            displayname = file
+            pdf = PyPDF2.PdfFileReader(filepath)
+            numpages = pdf.getNumPages()
+            displayname += " - " + str(numpages) + " pages"
+            originAudioListBox.insert("end", displayname)
+            originAudioListBox.see(originAudioListBox.size())
+            # utils.root.update()
 
 
 def refreshOriginAudioList():
@@ -296,7 +307,7 @@ def convertSpeechText(event=None):
                 speechtext = speech.stt()
             speechtextEditArea.delete("1.0", tk.END)
             speechtextEditArea.insert("end-1c", speechtext)
-            
+
             if (len(speechtext)):
                 item = targetAudioListBox.curselection()[0]
                 targetAudioListBox.delete(item)
@@ -312,7 +323,7 @@ def convertSpeechText(event=None):
                     displaylength = str(math.floor(length % 60)) + " seconds"
                 displayname += " - " + displaylength + " [" + speechtext + "]"
                 targetAudioListBox.insert(item, displayname)
-    
+
             if (speechTextConfig.has_option(foldername + "_zh", filename) and
                     len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
                 speechinfoEditArea.insert(
@@ -357,9 +368,42 @@ def infoSpeechText(event=None):
         speechinfoEditArea.insert("end-1c", speechinfo)
 
 
+def getPageImage(page):
+    xObject = page['/Resources']['/XObject'].getObject()
+    print(xObject)
+    for obj in xObject:
+        if xObject[obj]['/Subtype'] == '/Image':
+            size = (xObject[obj]['/Width'], xObject[obj]['/Height'])
+            data = xObject[obj].getData()
+            if xObject[obj]['/ColorSpace'] == '/DeviceRGB':
+                mode = "RGB"
+            else:
+                mode = "P"
+
+            img = None
+
+            filter = xObject[obj]['/Filter'][0]
+            if filter == '/FlateDecode':
+                img = Image.frombytes(mode, size, data)
+            elif filter == '/DCTDecode':
+                img = Image.open(io.BytesIO(data))
+            elif filter == '/JPXDecode':
+                img = Image.open(io.BytesIO(data))
+            if img != None:
+                img.thumbnail((500, 800), Image.ANTIALIAS)
+
+            print(img)
+
+            return ImageTk.PhotoImage(img)
+
+
 def loadSpeechText(event=None):
     global currentAudioFolder
     global speechTextConfig
+    global currentPdfFile
+    global canvas_manga_image
+    global manga_image
+    global manga_container
     if initialChecks():
         filename = getTargetAudioFileName()
         if filename != '':
@@ -368,50 +412,62 @@ def loadSpeechText(event=None):
             speechtextEditArea.delete("1.0", tk.END)
             speechinfoEditArea.delete("1.0", tk.END)
             speechtext = ""
-            if (speechTextConfig.has_option(foldername, filename) and
-                    len(speechTextConfig[foldername][filename].strip()) > 0):
-                speechtext = speechTextConfig[foldername][filename]
-                speechtextEditArea.insert("end-1c", speechtext)
-            elif (autoSTTNext.get() == 1):
-                speech = SpeechToText.SpeechToText(
-                    currentAudioFolder, wavename, cfgfile="config.ini")
-                speechtext = speech.stt().strip()
-                if (len(speechtext) > 0):
+            fileformat = speechTextConfig["DEFAULT"]["format"]
+            if (fileformat == ".mp3" or fileformat == ".wav"):
+                if (speechTextConfig.has_option(foldername, filename) and
+                        len(speechTextConfig[foldername][filename].strip()) > 0):
+                    speechtext = speechTextConfig[foldername][filename]
                     speechtextEditArea.insert("end-1c", speechtext)
-                    speechTextConfig[foldername][filename] = speechtext
-                    speechfilepath = os.path.join(
-                        currentAudioFolder, foldername + "_speechtext.txt")
-                    speechTextConfig.write(open(speechfilepath, "w"))
-                    
-                    if (len(speechtext)):
-                        item = targetAudioListBox.curselection()[0]
-                        targetAudioListBox.delete(item)
-                        displayname = filename
-                        audioFile = AudioFile.audiofile(
-                            os.path.join(currentAudioFolder, filename))
-                        length = audioFile.length()
-                        displaylength = ""
-                        if length > 60:
-                            displaylength = str(math.floor(length/60)) + \
-                                ":" + str(math.floor(length % 60)).zfill(2)
-                        else:
-                            displaylength = str(math.floor(length % 60)) + " seconds"
-                        displayname += " - " + displaylength + " [" + speechtext + "]"
-                        targetAudioListBox.insert(item, displayname)
-                
-            if (speechTextConfig.has_option(foldername + "_zh", filename) and
-                    len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
-                speechinfoEditArea.insert(
-                    "end-1c", speechTextConfig[foldername + "_zh"][filename])
-            elif (len(speechtext) > 0):
-                translater = TranslateText.TranslateText(cfgfile="config.ini")
-                speechtext = translater.translate(speechtext)
-                if (len(speechtext) > 0):
-                    speechinfoEditArea.insert("end-1c", speechtext)
-                    speechTextConfig[foldername + "_zh"][filename] = speechtext
-                    speechfilepath = os.path.join(
-                        currentAudioFolder, foldername + "_speechtext.txt")
-                    speechTextConfig.write(open(speechfilepath, "w"))
+                elif (autoSTTNext.get() == 1):
+                    speech = SpeechToText.SpeechToText(
+                        currentAudioFolder, wavename, cfgfile="config.ini")
+                    speechtext = speech.stt().strip()
+                    if (len(speechtext) > 0):
+                        speechtextEditArea.insert("end-1c", speechtext)
+                        speechTextConfig[foldername][filename] = speechtext
+                        speechfilepath = os.path.join(
+                            currentAudioFolder, foldername + "_speechtext.txt")
+                        speechTextConfig.write(open(speechfilepath, "w"))
+
+                        if (len(speechtext)):
+                            item = targetAudioListBox.curselection()[0]
+                            targetAudioListBox.delete(item)
+                            displayname = filename
+                            audioFile = AudioFile.audiofile(
+                                os.path.join(currentAudioFolder, filename))
+                            length = audioFile.length()
+                            displaylength = ""
+                            if length > 60:
+                                displaylength = str(math.floor(length/60)) + \
+                                    ":" + str(math.floor(length % 60)).zfill(2)
+                            else:
+                                displaylength = str(
+                                    math.floor(length % 60)) + " seconds"
+                            displayname += " - " + displaylength + \
+                                " [" + speechtext + "]"
+                            targetAudioListBox.insert(item, displayname)
+
+                if (speechTextConfig.has_option(foldername + "_zh", filename) and
+                        len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
+                    speechinfoEditArea.insert(
+                        "end-1c", speechTextConfig[foldername + "_zh"][filename])
+                elif (len(speechtext) > 0):
+                    translater = TranslateText.TranslateText(
+                        cfgfile="config.ini")
+                    speechtext = translater.translate(speechtext)
+                    if (len(speechtext) > 0):
+                        speechinfoEditArea.insert("end-1c", speechtext)
+                        speechTextConfig[foldername +
+                                         "_zh"][filename] = speechtext
+                        speechfilepath = os.path.join(
+                            currentAudioFolder, foldername + "_speechtext.txt")
+                        speechTextConfig.write(open(speechfilepath, "w"))
+            elif (fileformat == ".pdf"):
+                item = targetAudioListBox.curselection()[0]
+                page = currentPdfFile.getPage(item)
+                manga_image = getPageImage(page)
+                canvas_manga_image.config(scrollregion=canvas_manga_image.bbox('all'))
+                canvas_manga_image.itemconfig(manga_container, image=manga_image)
         else:
             utils.displayErrorMessage("Select Target Audio First 3")
 
@@ -475,6 +531,7 @@ def playTargetAudio(event=None):
         else:
             utils.displayErrorMessage("Select Target Audio First 4")
 
+
 def playTTSthread():
     language = str(combo_tts_language.get())
     ttsname = language.rsplit("-", 1)[0].strip()
@@ -491,15 +548,18 @@ def playTTSthread():
     ttsEngine.stop()
     print("Speaking done")
 
+
 def playTTSAudio(event=None):
     print("playTTSAudio")
     if initialChecks():
         playing = threading.Thread(target=playTTSthread, args=())
         playing.start()
 
+
 def loadTargetAudio(event=None):
     global currentAudioFolder
     global speechTextConfig
+    global currentPdfFile
     if initialChecks():
         filename = getOriginAudioFileName()
         if filename != '':
@@ -510,6 +570,8 @@ def loadTargetAudio(event=None):
             print("foldername " + foldername)
             filepath = os.path.join(originAudioFolder, foldername)
             currentAudioFolder = filepath
+            if not os.path.exists(currentAudioFolder):
+                os.makedirs(currentAudioFolder)
             print("currentAudioFolder " + currentAudioFolder)
             speechfilepath = os.path.join(
                 currentAudioFolder, foldername + "_speechtext.txt")
@@ -517,23 +579,41 @@ def loadTargetAudio(event=None):
             if (os.path.exists(speechfilepath)):
                 speechTextConfig.read(speechfilepath)
             else:
-                # speechTextConfig.add_section("DEFAULT")
                 speechTextConfig.add_section(foldername)
                 speechTextConfig.add_section(foldername + "_zh")
                 speechTextConfig["DEFAULT"]["format"] = fileformat
                 speechTextConfig.write(open(speechfilepath, "w"))
-
-            loading = threading.Thread(
-                target=loadTargetAudioList, args=(filepath,))
-            loading.start()
+            if (fileformat == ".mp3" or fileformat == ".wav"):
+                loading = threading.Thread(
+                    target=loadTargetAudioList, args=(filepath,))
+                loading.start()
+            elif (fileformat == ".pdf"):
+                filepath = os.path.join(originAudioFolder, filename)
+                currentPdfFile = PyPDF2.PdfFileReader(filepath)
+                numpages = currentPdfFile.getNumPages()
+                for p in range(numpages):
+                    displayname = filename + " - page " + str(p + 1)
+                    targetAudioListBox.insert("end", displayname)
+                    targetAudioListBox.see(targetAudioListBox.size())
         else:
             utils.displayErrorMessage("Select Origin Audio First")
 
+def loadMangaOCR():
+    global mangaOCR
+    if mangaOCR == None:
+        try:
+            mangaOCR = MangaOcr()
+        except ValueError:
+            print("MangaOcr ValueError")
+    if mangaOCR != None:
+        img = ImageGrab.grabclipboard()
+        text = mangaOCR(img)
+        speechtextEditArea.delete("1.0", tk.END)
+        speechtextEditArea.insert("end-1c", text)
+
 def getMangaOCRText(event=None):
-    img = ImageGrab.grabclipboard()
-    text = mangaOCR(img)
-    speechtextEditArea.delete("1.0", tk.END)
-    speechtextEditArea.insert("end-1c", text)
+    loading = threading.Thread(target=loadMangaOCR)
+    loading.start()
 
 # -- Recorded Audio Events --
 
@@ -641,6 +721,17 @@ def updateSilenceThreshhold(event=None):
     popupError.pack(pady=5)
 
     utils.root.wait_window(popupWindow)
+
+
+def handle_mouse_scroll(evt=None):
+    if evt.state == 0:
+        canvas_manga_image.yview_scroll(-1*(evt.delta), 'units')  # For MacOS
+        canvas_manga_image.yview_scroll(
+            int(-1*(evt.delta/120)), 'units')  # For windows
+    if evt.state == 1:
+        canvas_manga_image.xview_scroll(-1*(evt.delta), 'units')  # For MacOS
+        canvas_manga_image.xview_scroll(
+            int(-1*(evt.delta/120)), 'units')  # For windows
 
 # --- main ---
 
@@ -932,17 +1023,39 @@ checkbox_autoplay = tk.Checkbutton(
 
 # generate speech info frame
 
+manga_image = ImageTk.PhotoImage(Image.open("resized.jpg"))
+
 speechinfoFrame = tk.Frame(appRightFrame, bg='light sky blue')
 speechinfoFrame.grid(row=0, column=0, padx=5, pady=2)
 
-label = tk.Label(speechinfoFrame, text="Speech Text Meanings",
-                 bg="#F4F5FF", fg='Blue2')
-label.pack()
+canvas_manga_image = tk.Canvas(speechinfoFrame, width=500, height=410)
+
+manga_container = canvas_manga_image.create_image(0, 0, anchor='nw', image=None, tags="img")
+
+# Vertical and Horizontal scrollbars
+v_scroll = tk.Scrollbar(speechinfoFrame, orient='vertical')
+h_scroll = tk.Scrollbar(speechinfoFrame, orient='horizontal')
+# Grid and configure weight.
+canvas_manga_image.grid(row=0, column=0,  sticky='nsew')
+h_scroll.grid(row=1, column=0, sticky='ew')
+v_scroll.grid(row=0, column=1, sticky='ns')
+# Set the scrollbars to the canvas
+canvas_manga_image.config(xscrollcommand=h_scroll.set,
+            yscrollcommand=v_scroll.set)
+# Set canvas view to the scrollbars
+v_scroll.config(command=canvas_manga_image.yview)
+h_scroll.config(command=canvas_manga_image.xview)
+# Assign the region to be scrolled
+canvas_manga_image.config(scrollregion=canvas_manga_image.bbox('all'))
+canvas_manga_image.bind_class(canvas_manga_image, "<MouseWheel>", handle_mouse_scroll)
+
+speechinfoTextFrame = tk.Frame(appRightFrame, bg='light sky blue')
+speechinfoTextFrame.grid(row=1, column=0, padx=5, pady=2)
 
 # create speech text info area
-speechinfoScrollbarY = tk.Scrollbar(speechinfoFrame)
+speechinfoScrollbarY = tk.Scrollbar(speechinfoTextFrame)
 ft = tkFont.Font(family="Courier New")
-speechinfoEditArea = tk.Text(speechinfoFrame, height=27, wrap="word",
+speechinfoEditArea = tk.Text(speechinfoTextFrame, height=8, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
                              borderwidth=0, highlightthickness=0, font=ft, width=45, bg="#F4F5FF", fg='HotPink1')
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
@@ -990,9 +1103,8 @@ utils.root.bind("<Up>", targetAudioSelectionUp)
 utils.root.bind("<Left>", targetAudioSelectionUp)
 utils.root.bind("<Shift_R>", startStopRecording)
 targetAudioListBox.bind("<<ListboxSelect>>", loadSpeechText)
-ttsEngine = pyttsx3.init("sapi5") # object creation
-mangaOCR = MangaOcr()
-  
+ttsEngine = pyttsx3.init("sapi5")  # object creation
+
 if __name__ == '__main__':
     # -- load target audio initially. Set info message also has a bonus that it'll start
     # the GUI before the targetAudio list has completed
