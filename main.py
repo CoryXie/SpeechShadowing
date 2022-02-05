@@ -479,6 +479,8 @@ def playTTSthread():
     for voice in voices:
         if (voice.name.find(ttsname) > 0):
             ttsEngine.setProperty("voice", voice.id)
+    ttsrate = int(combo_tts_rate.get())
+    ttsEngine.setProperty("rate", ttsrate)
     speechtext = speechtextEditArea.get('0.0', tk.END).strip()
     print("Speaking " + language + " [" + speechtext + "]")
     ttsEngine.say(speechtext)
@@ -858,18 +860,30 @@ button_playboth = tk.Button(
     lowMiddleFrame, text='Play Both Audio (Right Ctrl Key)', command=playBothAudio, width=25)
 button_playboth.pack(pady=2)
 
-lowMiddleTTSCombonFrame = tk.Frame(lowMiddleFrame, bg='light sky blue')
-lowMiddleTTSCombonFrame.pack()
+lowMiddleTTSLanguageCombonFrame = tk.Frame(lowMiddleFrame, bg='light sky blue')
+lowMiddleTTSLanguageCombonFrame.pack()
 
-label = tk.Label(lowMiddleTTSCombonFrame, text="TTS Language",
+label = tk.Label(lowMiddleTTSLanguageCombonFrame, text="TTS Language",
                  bg='light sky blue')
 label.grid(row=0, column=0)
 combo_tts_language = ttk.Combobox(
-    lowMiddleTTSCombonFrame, width=14)
+    lowMiddleTTSLanguageCombonFrame, width=14)
 combo_tts_language['values'] = (
     "David - English", "Zira - English", "Haruka - Japanese", "Huihui - Chinese")
 combo_tts_language.current(2)
 combo_tts_language.grid(row=0, column=1)
+
+lowMiddleTTSRateCombonFrame = tk.Frame(lowMiddleFrame, bg='light sky blue')
+lowMiddleTTSRateCombonFrame.pack()
+
+label = tk.Label(lowMiddleTTSRateCombonFrame, text="TTS Words per Minute",
+                 bg='light sky blue')
+label.grid(row=0, column=0)
+combo_tts_rate = ttk.Combobox(
+    lowMiddleTTSRateCombonFrame, width=5)
+combo_tts_rate['values'] = (80, 100, 120, 150, 180, 200, 220, 250, 280, 300)
+combo_tts_rate.current(3)
+combo_tts_rate.grid(row=0, column=1)
 
 button_convert_speechtext = tk.Button(
     lowRightFrame, text='Convert Speech to Text', command=convertSpeechText, width=20)
