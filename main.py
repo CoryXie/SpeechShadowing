@@ -45,8 +45,8 @@ global currentPdfFile
 
 appDataFolderPath = "./TargetAudio"
 recordedAudioFolderPath = "./RecordedAudio"
-currentSessionFolderPath = None
-currentSessionFolderName = None
+currentSessionFolderPath = ""
+currentSessionFolderName = ""
 silenceThreshold = -36
 repeatPlayCount = 1
 mangaOCR = None
@@ -247,13 +247,15 @@ def separateAudioDataFile(filename):
 def separateAudioFileVocalsHandler(event=None):
     global silenceThreshold
     global currentSessionFolderPath
+    global currentSessionFolderName
     if initialChecks():
         filename = getAppDataFileName()
         if filename != '':
             pathparts = filename.rsplit(".", 1)
             foldername = pathparts[0]
-            filepath = os.path.join(appDataFolderPath, foldername)
-            currentSessionFolderPath = filepath
+            folderpath = os.path.join(appDataFolderPath, foldername)
+            currentSessionFolderPath = folderpath
+            currentSessionFolderName = foldername
             if not os.path.exists(currentSessionFolderPath):
                 os.makedirs(currentSessionFolderPath)
             separating = threading.Thread(
@@ -282,13 +284,15 @@ def deleteCurrentSessionDataFileHandler(event=None):
 def splitAppAudioDataHandler(event=None):
     global silenceThreshold
     global currentSessionFolderPath
+    global currentSessionFolderName
     if initialChecks():
         filename = getAppDataFileName()
         if filename != '':
             pathparts = filename.rsplit(".", 1)
             foldername = pathparts[0]
-            filepath = os.path.join(appDataFolderPath, foldername)
-            currentSessionFolderPath = filepath
+            folderpath = os.path.join(appDataFolderPath, foldername)
+            currentSessionFolderPath = folderpath
+            currentSessionFolderName = foldername
             if not os.path.exists(currentSessionFolderPath):
                 os.makedirs(currentSessionFolderPath)
             splitting = threading.Thread(
@@ -593,7 +597,7 @@ def loadAppDataFileHandler(event=None):
                 os.makedirs(folderpath)
 
             # If we have current opening session, save the last index
-            if (currentSessionFolderPath != None):
+            if (currentSessionFolderPath != ""):
                 print("currentSessionFolderPath " + currentSessionFolderPath)
                 speechfilepath = os.path.join(currentSessionFolderPath,
                                               currentSessionFolderName + "_speechtext.txt")
