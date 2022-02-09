@@ -34,7 +34,7 @@ class AutoScrollbar(ttk.Scrollbar):
 class CanvasImage:
     """ Display and zoom image """
 
-    def __init__(self, placeholder, path, width=500, height=600):
+    def __init__(self, placeholder, path, width=600, height=620):
         """ Initialize the ImageFrame """
         self.imscale = 1.0  # scale for the canvas image zoom, public for outer classes
         self.__delta = 1.3  # zoom magnitude
@@ -45,20 +45,11 @@ class CanvasImage:
         # Create ImageFrame in placeholder widget
         # placeholder of the ImageFrame object
         self.__imframe = ttk.Frame(placeholder)
-        # Vertical and horizontal scrollbars for canvas
-        hbar = AutoScrollbar(self.__imframe, orient='horizontal')
-        vbar = AutoScrollbar(self.__imframe, orient='vertical')
-        hbar.grid(row=1, column=0, sticky='we')
-        vbar.grid(row=0, column=1, sticky='ns')
         # Create canvas and bind it with scrollbars. Public for outer classes
         self.canvas = tk.Canvas(self.__imframe, highlightthickness=0,
-                                xscrollcommand=hbar.set, yscrollcommand=vbar.set,
                                 width=width, height=height)
         self.canvas.grid(row=0, column=0, sticky='nswe')
         self.canvas.update()  # wait till canvas is created
-        # bind scrollbars to the canvas
-        hbar.configure(command=self.__scroll_x)
-        vbar.configure(command=self.__scroll_y)
         # Bind events to the Canvas
         # canvas is resized
         self.canvas.bind('<Configure>', lambda event: self.__show_image())
@@ -72,6 +63,11 @@ class CanvasImage:
         self.canvas.bind('<Button-5>',   self.__wheel)
         # zoom for Linux, wheel scroll up
         self.canvas.bind('<Button-4>',   self.__wheel)
+        # move and pan support
+        self.canvas.bind('<ButtonPress-1>',
+                         lambda event: self.canvas.scan_mark(event.x, event.y))
+        self.canvas.bind(
+            "<B1-Motion>", lambda event: self.canvas.scan_dragto(event.x, event.y, gain=1))
         # Handle keystrokes in idle mode, because program slows down on a weak computers,
         # when too many key stroke events in the same time
         self.canvas.bind('<Key>', lambda event: self.canvas.after_idle(
@@ -378,7 +374,7 @@ class CanvasImage:
         """ ImageFrame destructor """
         print('Close image: {}'.format(self.path))
         self.__image.close()
-        if (self.__pyramid != None):
+        if self.__pyramid:
             map(lambda i: i.close, self.__pyramid)  # close all pyramid images
         del self.__pyramid[:]  # delete pyramid list
         del self.__pyramid  # delete pyramid variable
