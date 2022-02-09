@@ -72,6 +72,7 @@ class CanvasImage:
         # when too many key stroke events in the same time
         self.canvas.bind('<Key>', lambda event: self.canvas.after_idle(
             self.__keystroke, event))
+        self.canvas.configure(background='light sky blue')
         print('Open image: {}'.format(self.path))
 
         # Decide if this image huge or not
