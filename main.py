@@ -404,6 +404,9 @@ def getPageImage(page):
             elif filter == '/JPXDecode':
                 img = Image.open(io.BytesIO(data))
                 ext = ".jp2"
+            else:
+                img = Image.open(io.BytesIO(data))
+                ext = ".jpg"
 
             imagepath = ""
             if img != None:
