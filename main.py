@@ -24,7 +24,7 @@ import utils
 from PIL import ImageGrab, ImageTk, Image
 from manga_ocr import MangaOcr
 import pyttsx3
-import PyPDF2
+import pdfplumber
 import SpeechToText
 import TranslateText
 import ichiran
@@ -150,8 +150,8 @@ def loadAppDataFileList():
         elif file[len(file) - 4:] in [".pdf"]:
             filepath = os.path.join(appDataFolderPath, file)
             displayname = file
-            pdf = PyPDF2.PdfFileReader(filepath)
-            numpages = pdf.getNumPages()
+            pdf = pdfplumber.open(filepath)
+            numpages = len(pdf.pages)
             displayname += " - " + str(numpages) + " pages"
             appDataFileListBox.insert("end", displayname)
             appDataFileListBox.see(appDataFileListBox.size())
@@ -379,46 +379,6 @@ def speechTextInfoHandler(event=None):
         speechinfoEditArea.delete("1.0", tk.END)
         speechinfoEditArea.insert("end-1c", speechinfo)
 
-
-def getPageImage(page):
-    xObject = page['/Resources']['/XObject'].getObject()
-    print(xObject)
-    for obj in xObject:
-        if xObject[obj]['/Subtype'] == '/Image':
-            size = (xObject[obj]['/Width'], xObject[obj]['/Height'])
-            data = xObject[obj].getData()
-            if xObject[obj]['/ColorSpace'] == '/DeviceRGB':
-                mode = "RGB"
-            else:
-                mode = "P"
-
-            img = None
-
-            filter = xObject[obj]['/Filter'][0]
-            if filter == '/FlateDecode':
-                img = Image.frombytes(mode, size, data)
-                ext = ".png"
-            elif filter == '/DCTDecode':
-                img = Image.open(io.BytesIO(data))
-                ext = ".jpg"
-            elif filter == '/JPXDecode':
-                img = Image.open(io.BytesIO(data))
-                ext = ".jp2"
-            else:
-                img = Image.open(io.BytesIO(data))
-                ext = ".jpg"
-
-            imagepath = ""
-            if img != None:
-                print(img)
-                #img.thumbnail((500, 800), Image.ANTIALIAS)
-                imagepath = os.path.join(
-                    currentSessionFolderPath, "last_viewed_manga" + ext)
-                img.save(imagepath)
-
-            return imagepath
-
-
 def loadCurrentSessionFileHandler(event=None):
     global currentSessionFolderPath
     global speechTextConfig
@@ -485,13 +445,16 @@ def loadCurrentSessionFileHandler(event=None):
                         speechTextConfig.write(open(speechfilepath, "w"))
             elif (fileformat == ".pdf"):
                 item = currentSessionListBox.curselection()[0]
-                page = currentPdfFile.getPage(item)
-                imagepath = getPageImage(page)
+                page = currentPdfFile.pages[item]
+                imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
+                page.to_image().save(imagepath, format="png")
                 if (mangaImage != None):
                     mangaImage.destroy()
-                mangaImage = CanvasImage(
-                    mangaImageFrame, imagepath)  # create widget
+                    mangaImage = None
+                mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
                 mangaImage.grid(row=0, column=0)  # show widget
+                speechtext = page.extract_text()
+                speechtextEditArea.insert("end-1c", speechtext)
         else:
             utils.displayErrorMessage("Select Target Audio First 3")
 
@@ -644,8 +607,8 @@ def loadAppDataFileHandler(event=None):
                 mangaImageFrame.grid(row=0, column=0, padx=0, pady=0)
                 currentSessionListBox.delete(0, currentSessionListBox.size())
                 filepath = os.path.join(appDataFolderPath, filename)
-                currentPdfFile = PyPDF2.PdfFileReader(filepath)
-                numpages = currentPdfFile.getNumPages()
+                currentPdfFile = pdfplumber.open(filepath)
+                numpages = len(currentPdfFile.pages)
                 for p in range(numpages):
                     displayname = filename + " - page " + str(p + 1)
                     currentSessionListBox.insert("end", displayname)
@@ -655,13 +618,16 @@ def loadAppDataFileHandler(event=None):
                     lastindex = 0
                 currentSessionListBox.select_set(lastindex)
                 currentSessionListBox.see(lastindex)
-                page = currentPdfFile.getPage(lastindex)
-                imagepath = getPageImage(page)
+                page = currentPdfFile.pages[lastindex]
+                imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
+                page.to_image().save(imagepath, format="png")
                 if (mangaImage != None):
                     mangaImage.destroy()
-                mangaImage = CanvasImage(
-                    mangaImageFrame, imagepath)  # create widget
+                    mangaImage = None
+                mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
                 mangaImage.grid(row=0, column=0)  # show widget
+                speechtext = page.extract_text()
+                speechtextEditArea.insert("end-1c", speechtext)
         else:
             utils.displayErrorMessage("Select Origin Audio First")
 
@@ -684,6 +650,18 @@ def getMangaOCRTextHandler(event=None):
     loading = threading.Thread(target=getMangaOCRTextThread)
     loading.start()
 
+def translateTextThread():
+    speechtext = speechtextEditArea.get('0.0', tk.END).strip()
+    if (speechtext != ""):
+        translater = TranslateText.TranslateText(cfgfile="config.ini")
+        speechtext = translater.translate(speechtext)
+        if (len(speechtext) > 0):
+            speechinfoEditArea.delete("1.0", tk.END)
+            speechinfoEditArea.insert("end-1c", speechtext)
+                    
+def translateTextHandler(event=None):
+    translating = threading.Thread(target=translateTextThread)
+    translating.start()
 
 def playRecordedAudioHandler(event=None):
     if initialChecks():
@@ -963,9 +941,16 @@ button_separate_vocal = tk.Button(
     lowLeftFrame, text='Split Origin Audio (with Vocal Separation)', command=separateAudioFileVocalsHandler, width=35)
 button_separate_vocal.pack(pady=2)
 
+lowLeftTextButtonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
+lowLeftTextButtonFrame.pack()
+
 button_manga_ocr = tk.Button(
-    lowLeftFrame, text='Get Manga OCR Text', command=getMangaOCRTextHandler, width=35)
-button_manga_ocr.pack(pady=2)
+    lowLeftTextButtonFrame, text='OCR Text', command=getMangaOCRTextHandler)
+button_manga_ocr.grid(row=0, column=0, padx=5, pady=2)
+
+button_translate_text = tk.Button(
+    lowLeftTextButtonFrame, text='Translate Text', command=translateTextHandler)
+button_translate_text.grid(row=0, column=1, padx=5, pady=2)
 
 lowLeftSilenceLengthCombonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
 lowLeftSilenceLengthCombonFrame.pack()
