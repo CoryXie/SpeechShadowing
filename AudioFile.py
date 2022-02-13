@@ -22,6 +22,7 @@ class audiofile:
             song = AudioSegment.from_wav(self.file)
             play(song)
         utils.displayInfoMessage('')
+        utils.displayErrorMessage('')
 
     def length(self):
         if self.file[len(self.file) - 4:] == ".mp3":

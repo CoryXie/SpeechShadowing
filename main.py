@@ -81,15 +81,8 @@ def getAppDataFileName():
 
 
 def getRecordedAudioFileName():
-    targetFilename = getAppDataFileName()
-    if targetFilename != '':
-        filename = "recordedAudio-" + \
-            targetFilename[0:len(targetFilename)-4] + ".wav"
-        return filename
-    else:
-        print("targetfilename doesn't exist")
-        return ''
-
+    global currentSessionFolderName
+    return currentSessionFolderName + "-recorded.wav"
 
 def loadCurrentSessionAudioListThread(folder, lastindex=0):
     global mangaImage
@@ -158,8 +151,8 @@ def loadAppDataFileList():
 
 
 def refreshAppDataFileList():
-    global running
-    if running is not None:
+    global activeAudioRecorder
+    if activeAudioRecorder is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
         loading = threading.Thread(target=loadAppDataFileList)
@@ -167,9 +160,9 @@ def refreshAppDataFileList():
 
 
 def refreshCurrentSessionFileList():
-    global running
+    global activeAudioRecorder
     global currentSessionFolderPath
-    if running is not None:
+    if activeAudioRecorder is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
         loading = threading.Thread(
@@ -177,9 +170,9 @@ def refreshCurrentSessionFileList():
         loading.start()
 
 def splitAppAudioFileListThread(filename):
-    global running
+    global activeAudioRecorder
     global currentSessionFolderPath
-    if running is not None:
+    if activeAudioRecorder is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
         silenceThreshold = int(combo_min_silence_threshold.get())
@@ -193,11 +186,10 @@ def splitAppAudioFileListThread(filename):
         audiosplit.split()
         loadAppDataFileHandler()
 
-
-def initialChecks():
-    global running
-    # general things to do before running events
-    if running is not None:
+def noRecorderRunning():
+    global activeAudioRecorder
+    # general things to do before activeAudioRecorder events
+    if activeAudioRecorder is not None:
         utils.displayErrorMessage('Recording Audio, Stop That First')
         return False
     utils.displayErrorMessage('')
@@ -219,13 +211,12 @@ def openHelp(event=None):
 
 
 def uploadAppDataFileHandler(event=None):
-    if initialChecks():
-        filenames = filedialog.askopenfilenames(
-            title="Select App Data File", filetypes=[("Audio & Manga Files", ".mp3 .wav .pdf")])
-        for filename in filenames:
-            shutil.copy(filename, appDataFolderPath)
-        if (len(filenames) > 0):
-            refreshAppDataFileList()
+    filenames = filedialog.askopenfilenames(
+        title="Select App Data File", filetypes=[("Audio & Manga Files", ".mp3 .wav .pdf")])
+    for filename in filenames:
+        shutil.copy(filename, appDataFolderPath)
+    if (len(filenames) > 0):
+        refreshAppDataFileList()
 
 
 def separateAudioDataFile(filename):
@@ -248,215 +239,212 @@ def separateAudioFileVocalsHandler(event=None):
     global silenceThreshold
     global currentSessionFolderPath
     global currentSessionFolderName
-    if initialChecks():
-        filename = getAppDataFileName()
-        if filename != '':
-            pathparts = filename.rsplit(".", 1)
-            foldername = pathparts[0]
-            folderpath = os.path.join(appDataFolderPath, foldername)
-            currentSessionFolderPath = folderpath
-            currentSessionFolderName = foldername
-            if not os.path.exists(currentSessionFolderPath):
-                os.makedirs(currentSessionFolderPath)
-            separating = threading.Thread(
-                target=separateAudioDataFile, args=(filename,))
-            separating.start()
-        else:
-            utils.displayErrorMessage('Select Origin Audio To Split')
+    filename = getAppDataFileName()
+    if filename != '':
+        pathparts = filename.rsplit(".", 1)
+        foldername = pathparts[0]
+        folderpath = os.path.join(appDataFolderPath, foldername)
+        currentSessionFolderPath = folderpath
+        currentSessionFolderName = foldername
+        if not os.path.exists(currentSessionFolderPath):
+            os.makedirs(currentSessionFolderPath)
+        separating = threading.Thread(
+            target=separateAudioDataFile, args=(filename,))
+        separating.start()
+    else:
+        utils.displayErrorMessage('Select Origin Audio To Split')
 
 
 def deleteAppDataFileHandler(event=None):
     # remove all elements in currentSessionListBox
-    if initialChecks():
-        filename = getAppDataFileName()
-        os.remove(os.path.join(appDataFolderPath, filename))
-        refreshAppDataFileList()
+    filename = getAppDataFileName()
+    os.remove(os.path.join(appDataFolderPath, filename))
+    refreshAppDataFileList()
 
 def deleteCurrentSessionDataFileHandler(event=None):
     global currentSessionFolderPath
     # remove all elements in currentSessionListBox
-    if initialChecks():
-        filename = getCurrentSessionFileName()
+    filename = getCurrentSessionFileName()
+    if (filename != ""):
         os.remove(os.path.join(currentSessionFolderPath, filename))
         refreshCurrentSessionFileList()
-
+    else:
+        utils.displayErrorMessage("Please select file to delete")
 
 def splitAppAudioDataHandler(event=None):
     global silenceThreshold
     global currentSessionFolderPath
     global currentSessionFolderName
-    if initialChecks():
-        filename = getAppDataFileName()
-        if filename != '':
-            pathparts = filename.rsplit(".", 1)
-            foldername = pathparts[0]
-            folderpath = os.path.join(appDataFolderPath, foldername)
-            currentSessionFolderPath = folderpath
-            currentSessionFolderName = foldername
-            if not os.path.exists(currentSessionFolderPath):
-                os.makedirs(currentSessionFolderPath)
-            splitting = threading.Thread(
-                target=splitAppAudioFileListThread, args=(filename,))
-            splitting.start()
-        else:
-            utils.displayErrorMessage('Select Target Audio To Split')
+    filename = getAppDataFileName()
+    if (filename != ""):
+        pathparts = filename.rsplit(".", 1)
+        foldername = pathparts[0]
+        folderpath = os.path.join(appDataFolderPath, foldername)
+        currentSessionFolderPath = folderpath
+        currentSessionFolderName = foldername
+        if not os.path.exists(currentSessionFolderPath):
+            os.makedirs(currentSessionFolderPath)
+        splitting = threading.Thread(
+            target=splitAppAudioFileListThread, args=(filename,))
+        splitting.start()
+    else:
+        utils.displayErrorMessage('Select Target Audio To Split')
 
 
 def convertSpeechTextHandler(event=None):
     global currentSessionFolderPath
-    if initialChecks():
-        filename = getCurrentSessionFileName()
-        if filename != '':
-            foldername = os.path.basename(
-                os.path.normpath(currentSessionFolderPath))
-            wavename = filename.rsplit(".", 1)[0] + ".wav"
-            if (speechTextConfig.has_option(foldername, filename) and
-                    len(speechTextConfig[foldername][filename].strip()) > 0):
-                speechtext = speechTextConfig[foldername][filename].strip()
-            else:
-                speech = SpeechToText.SpeechToText(
-                    currentSessionFolderPath, wavename, "config.ini")
-                speechtext = speech.stt()
-            speechtextEditArea.delete("1.0", tk.END)
-            speechtextEditArea.insert("end-1c", speechtext)
-
-            if (len(speechtext)):
-                item = currentSessionListBox.curselection()[0]
-                currentSessionListBox.delete(item)
-                displayname = filename
-                audioFile = AudioFile.audiofile(
-                    os.path.join(currentSessionFolderPath, filename))
-                length = audioFile.length()
-                displaylength = ""
-                if length > 60:
-                    displaylength = str(math.floor(length/60)) + \
-                        ":" + str(math.floor(length % 60)).zfill(2)
-                else:
-                    displaylength = str(math.floor(length % 60)) + " seconds"
-                displayname += " - " + displaylength + " [" + speechtext + "]"
-                currentSessionListBox.insert(item, displayname)
-
-            if (speechTextConfig.has_option(foldername + "_zh", filename) and
-                    len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
-                speechinfoEditArea.insert(
-                    "end-1c", speechTextConfig[foldername + "_zh"][filename])
-            elif (len(speechtext) > 0):
-                translater = TranslateText.TranslateText(cfgfile="config.ini")
-                speechtext = translater.translate(speechtext)
-                if (len(speechtext) > 0):
-                    speechinfoEditArea.insert("end-1c", speechtext)
-                    speechTextConfig[foldername + "_zh"][filename] = speechtext
-                    speechfilepath = os.path.join(
-                        currentSessionFolderPath, foldername + "_speechtext.txt")
-                    speechTextConfig.write(open(speechfilepath, "w"))
+    filename = getCurrentSessionFileName()
+    if (filename != ""):
+        foldername = os.path.basename(os.path.normpath(currentSessionFolderPath))
+        wavename = filename.rsplit(".", 1)[0] + ".wav"
+        if (speechTextConfig.has_option(foldername, filename) and
+                len(speechTextConfig[foldername][filename].strip()) > 0):
+            speechtext = speechTextConfig[foldername][filename].strip()
         else:
-            utils.displayErrorMessage("Select Target Audio First 1")
+            speech = SpeechToText.SpeechToText(currentSessionFolderPath, wavename, "config.ini")
+            speechtext = speech.stt()
+        speechtextEditArea.delete("1.0", tk.END)
+        speechtextEditArea.insert("end-1c", speechtext)
+
+        if (len(speechtext)):
+            item = currentSessionListBox.curselection()[0]
+            currentSessionListBox.delete(item)
+            displayname = filename
+            audioFile = AudioFile.audiofile(
+                os.path.join(currentSessionFolderPath, filename))
+            length = audioFile.length()
+            displaylength = ""
+            if length > 60:
+                displaylength = str(math.floor(length/60)) + \
+                    ":" + str(math.floor(length % 60)).zfill(2)
+            else:
+                displaylength = str(math.floor(length % 60)) + " seconds"
+            displayname += " - " + displaylength + " [" + speechtext + "]"
+            currentSessionListBox.insert(item, displayname)
+
+        if (speechTextConfig.has_option(foldername + "_zh", filename) and
+                len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
+            speechinfoEditArea.insert(
+                "end-1c", speechTextConfig[foldername + "_zh"][filename])
+        elif (len(speechtext) > 0):
+            translater = TranslateText.TranslateText(cfgfile="config.ini")
+            speechtext = translater.translate(speechtext)
+            if (len(speechtext) > 0):
+                speechinfoEditArea.insert("end-1c", speechtext)
+                speechTextConfig[foldername + "_zh"][filename] = speechtext
+                speechfilepath = os.path.join(currentSessionFolderPath, foldername + "_speechtext.txt")
+                speechTextConfig.write(open(speechfilepath, "w"))
+    else:
+        utils.displayErrorMessage("Please select audio to convert to text!")
 
 
 def saveSpeechTextHandler(event=None):
     global currentSessionFolderPath
     global speechTextConfig
-    if initialChecks():
-        filename = getCurrentSessionFileName()
-        if filename != '':
-            foldername = os.path.basename(
-                os.path.normpath(currentSessionFolderPath))
-            speechfilepath = os.path.join(
-                currentSessionFolderPath, foldername + "_speechtext.txt")
-            speechTextConfig[foldername][filename] = speechtextEditArea.get(
-                '0.0', tk.END).strip()
-            speechTextConfig[foldername + "_zh"][filename] = speechinfoEditArea.get(
-                '0.0', tk.END).strip()
-            speechTextConfig.write(open(speechfilepath, "w"))
-        else:
-            utils.displayErrorMessage("Select Target Audio First 2")
+    filename = getCurrentSessionFileName()
+    if filename != '':
+        foldername = os.path.basename(
+            os.path.normpath(currentSessionFolderPath))
+        speechfilepath = os.path.join(
+            currentSessionFolderPath, foldername + "_speechtext.txt")
+        speechTextConfig[foldername][filename] = speechtextEditArea.get(
+            '0.0', tk.END).strip()
+        speechTextConfig[foldername + "_zh"][filename] = speechinfoEditArea.get(
+            '0.0', tk.END).strip()
+        speechTextConfig.write(open(speechfilepath, "w"))
+    else:
+        utils.displayErrorMessage("Please select audio file to save speech text!")
 
-
+def loadSpeechTextInfoThread():
+    speechtext = speechtextEditArea.get('0.0', tk.END).strip()
+    translater = TranslateText.TranslateText(cfgfile="config.ini")
+    translatedtext = translater.translate(speechtext)
+    speechinfo = ichiran.ichiran(speechtext).info()
+    speechinfoEditArea.delete("1.0", tk.END)
+    speechinfoEditArea.insert("end-1c", translatedtext + "\n" + speechinfo)
+        
 def speechTextInfoHandler(event=None):
-    if initialChecks():
-        speechtext = speechtextEditArea.get('0.0', tk.END).strip()
-        speechinfo = ichiran.ichiran(speechtext).info()
-        speechinfoEditArea.delete("1.0", tk.END)
-        speechinfoEditArea.insert("end-1c", speechinfo)
+    loading = threading.Thread(target=loadSpeechTextInfoThread)
+    loading.start()
 
 def loadCurrentSessionFileHandler(event=None):
     global currentSessionFolderPath
     global speechTextConfig
     global currentPdfFile
     global mangaImage
-    if initialChecks():
-        filename = getCurrentSessionFileName()
-        if filename != '':
-            foldername = os.path.basename(
-                os.path.normpath(currentSessionFolderPath))
-            wavename = filename.rsplit(".", 1)[0] + ".wav"
-            speechtextEditArea.delete("1.0", tk.END)
-            speechinfoEditArea.delete("1.0", tk.END)
-            speechtext = ""
-            fileformat = speechTextConfig["DEFAULT"]["format"]
-            if (fileformat == ".mp3" or fileformat == ".wav"):
-                if (speechTextConfig.has_option(foldername, filename) and
-                        len(speechTextConfig[foldername][filename].strip()) > 0):
-                    speechtext = speechTextConfig[foldername][filename]
-                    speechtextEditArea.insert("end-1c", speechtext)
-                elif (autoSTTNext.get() == 1):
-                    speech = SpeechToText.SpeechToText(
-                        currentSessionFolderPath, wavename, cfgfile="config.ini")
-                    speechtext = speech.stt().strip()
-                    if (len(speechtext) > 0):
-                        speechtextEditArea.insert("end-1c", speechtext)
-                        speechTextConfig[foldername][filename] = speechtext
-                        speechfilepath = os.path.join(
-                            currentSessionFolderPath, foldername + "_speechtext.txt")
-                        speechTextConfig.write(open(speechfilepath, "w"))
-
-                        if (len(speechtext)):
-                            item = currentSessionListBox.curselection()[0]
-                            currentSessionListBox.delete(item)
-                            displayname = filename
-                            audioFile = AudioFile.audiofile(
-                                os.path.join(currentSessionFolderPath, filename))
-                            length = audioFile.length()
-                            displaylength = ""
-                            if length > 60:
-                                displaylength = str(math.floor(length/60)) + \
-                                    ":" + str(math.floor(length % 60)).zfill(2)
-                            else:
-                                displaylength = str(
-                                    math.floor(length % 60)) + " seconds"
-                            displayname += " - " + displaylength + \
-                                " [" + speechtext + "]"
-                            currentSessionListBox.insert(item, displayname)
-
-                if (speechTextConfig.has_option(foldername + "_zh", filename) and
-                        len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
-                    speechinfoEditArea.insert(
-                        "end-1c", speechTextConfig[foldername + "_zh"][filename])
-                elif (len(speechtext) > 0):
-                    translater = TranslateText.TranslateText(
-                        cfgfile="config.ini")
-                    speechtext = translater.translate(speechtext)
-                    if (len(speechtext) > 0):
-                        speechinfoEditArea.insert("end-1c", speechtext)
-                        speechTextConfig[foldername +
-                                         "_zh"][filename] = speechtext
-                        speechfilepath = os.path.join(
-                            currentSessionFolderPath, foldername + "_speechtext.txt")
-                        speechTextConfig.write(open(speechfilepath, "w"))
-            elif (fileformat == ".pdf"):
-                item = currentSessionListBox.curselection()[0]
-                page = currentPdfFile.pages[item]
-                imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
-                page.to_image().save(imagepath, format="png")
-                if (mangaImage != None):
-                    mangaImage.destroy()
-                    mangaImage = None
-                mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
-                mangaImage.grid(row=0, column=0)  # show widget
-                speechtext = page.extract_text()
+    filename = getCurrentSessionFileName()
+    if (filename != ""):
+        foldername = os.path.basename(os.path.normpath(currentSessionFolderPath))
+        wavename = filename.rsplit(".", 1)[0] + ".wav"
+        speechtextEditArea.delete("1.0", tk.END)
+        speechinfoEditArea.delete("1.0", tk.END)
+        speechtext = ""
+        fileformat = speechTextConfig["DEFAULT"]["format"]
+        if (fileformat == ".mp3" or fileformat == ".wav"):
+            if (speechTextConfig.has_option(foldername, filename) and
+                    len(speechTextConfig[foldername][filename].strip()) > 0):
+                speechtext = speechTextConfig[foldername][filename]
                 speechtextEditArea.insert("end-1c", speechtext)
-        else:
-            utils.displayErrorMessage("Select Target Audio First 3")
+            elif (autoSTTNext.get() == 1):
+                speech = SpeechToText.SpeechToText(
+                    currentSessionFolderPath, wavename, cfgfile="config.ini")
+                speechtext = speech.stt().strip()
+                if (len(speechtext) > 0):
+                    speechtextEditArea.insert("end-1c", speechtext)
+                    speechTextConfig[foldername][filename] = speechtext
+                    speechfilepath = os.path.join(
+                        currentSessionFolderPath, foldername + "_speechtext.txt")
+                    speechTextConfig.write(open(speechfilepath, "w"))
+
+                    if (len(speechtext)):
+                        item = currentSessionListBox.curselection()[0]
+                        currentSessionListBox.delete(item)
+                        displayname = filename
+                        audioFile = AudioFile.audiofile(
+                            os.path.join(currentSessionFolderPath, filename))
+                        length = audioFile.length()
+                        displaylength = ""
+                        if length > 60:
+                            displaylength = str(math.floor(length/60)) + \
+                                ":" + str(math.floor(length % 60)).zfill(2)
+                        else:
+                            displaylength = str(
+                                math.floor(length % 60)) + " seconds"
+                        displayname += " - " + displaylength + \
+                            " [" + speechtext + "]"
+                        currentSessionListBox.insert(item, displayname)
+                        currentSessionListBox.selection_clear(item)
+                        currentSessionListBox.select_set(item)
+                        currentSessionListBox.see(item)
+                        
+            if (speechTextConfig.has_option(foldername + "_zh", filename) and
+                    len(speechTextConfig[foldername + "_zh"][filename].strip()) > 0):
+                speechinfoEditArea.insert(
+                    "end-1c", speechTextConfig[foldername + "_zh"][filename])
+            elif (len(speechtext) > 0):
+                translater = TranslateText.TranslateText(
+                    cfgfile="config.ini")
+                speechtext = translater.translate(speechtext)
+                if (len(speechtext) > 0):
+                    speechinfoEditArea.insert("end-1c", speechtext)
+                    speechTextConfig[foldername +
+                                        "_zh"][filename] = speechtext
+                    speechfilepath = os.path.join(currentSessionFolderPath, foldername + "_speechtext.txt")
+                    speechTextConfig.write(open(speechfilepath, "w"))
+        elif (fileformat == ".pdf"):
+            item = currentSessionListBox.curselection()[0]
+            page = currentPdfFile.pages[item]
+            imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
+            page.to_image().save(imagepath, format="png")
+            if (mangaImage != None):
+                mangaImage.destroy()
+                mangaImage = None
+            mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
+            mangaImage.grid(row=0, column=0)  # show widget
+            speechtext = page.extract_text()
+            speechtextEditArea.insert("end-1c", speechtext)
+    else:
+        utils.displayErrorMessage("Please select file to load!")
 
 
 def playingUpdateTimerHandler():
@@ -503,21 +491,18 @@ def currentSessionPlayingThread(filepath):
             currentSessionListBox.see(selected+1)
             button_playtarget.invoke()
 
-
 def playCurrentSessionAudioFileHandler(event=None):
     global currentSessionFolderPath
     print("playCurrentSessionAudioFileHandler")
-    if initialChecks():
-        filename = getCurrentSessionFileName()
-        if filename != '':
-            print("playing folder " + currentSessionFolderPath)
-            print("playing file " + filename)
-            filepath = os.path.join(currentSessionFolderPath, filename)
-            playing = threading.Thread(
-                target=currentSessionPlayingThread, args=(filepath,))
-            playing.start()
-        else:
-            utils.displayErrorMessage("Select Target Audio First 4")
+    filename = getCurrentSessionFileName()
+    if (filename != ""):
+        print("playing folder " + currentSessionFolderPath)
+        print("playing file " + filename)
+        filepath = os.path.join(currentSessionFolderPath, filename)
+        playing = threading.Thread(target=currentSessionPlayingThread, args=(filepath,))
+        playing.start()
+    else:
+        utils.displayErrorMessage("Please select audio file to play!")
 
 
 def playingTTSAudioThread():
@@ -539,10 +524,8 @@ def playingTTSAudioThread():
 
 def playTTSAudioHandler(event=None):
     print("playTTSAudioHandler")
-    if initialChecks():
-        playing = threading.Thread(target=playingTTSAudioThread, args=())
-        playing.start()
-
+    playing = threading.Thread(target=playingTTSAudioThread)
+    playing.start()
 
 def loadAppDataFileHandler(event=None):
     global currentSessionFolderPath
@@ -550,86 +533,85 @@ def loadAppDataFileHandler(event=None):
     global speechTextConfig
     global currentPdfFile
     global mangaImage
-    if initialChecks():
-        filename = getAppDataFileName()
-        if filename != '':
-            pathparts = filename.rsplit(".", 1)
-            foldername = pathparts[0]
-            fileformat = "." + pathparts[1]
-            print("loading " + filename)
+    filename = getAppDataFileName()
+    if (filename != ""):
+        pathparts = filename.rsplit(".", 1)
+        foldername = pathparts[0]
+        fileformat = "." + pathparts[1]
+        print("loading " + filename)
 
-            folderpath = os.path.join(appDataFolderPath, foldername)
-            if not os.path.exists(folderpath):
-                os.makedirs(folderpath)
+        folderpath = os.path.join(appDataFolderPath, foldername)
+        if not os.path.exists(folderpath):
+            os.makedirs(folderpath)
 
-            # If we have current opening session, save the last index
-            if (currentSessionFolderPath != ""):
-                print("currentSessionFolderPath " + currentSessionFolderPath)
-                speechfilepath = os.path.join(currentSessionFolderPath,
-                                              currentSessionFolderName + "_speechtext.txt")
-                lastSelection = currentSessionListBox.curselection()
-                if (len(lastSelection) > 0):
-                    lastindex = lastSelection[0]
-                    speechTextConfig["DEFAULT"]["lastindex"] = str(lastindex)
-                    speechTextConfig.write(open(speechfilepath, "w"))
-
-            # Open new session
-            speechfilepath = os.path.join(
-                folderpath, foldername + "_speechtext.txt")
-            if (os.path.exists(speechfilepath)):
-                speechTextConfig.read(speechfilepath)
-            else:
-                speechTextConfig.add_section(foldername)
-                speechTextConfig.add_section(foldername + "_zh")
-                speechTextConfig["DEFAULT"]["format"] = fileformat
-                speechTextConfig["DEFAULT"]["lastindex"] = str(0)
+        # If we have current opening session, save the last index
+        if (currentSessionFolderPath != ""):
+            print("currentSessionFolderPath " + currentSessionFolderPath)
+            speechfilepath = os.path.join(currentSessionFolderPath,
+                                            currentSessionFolderName + "_speechtext.txt")
+            lastSelection = currentSessionListBox.curselection()
+            if (len(lastSelection) > 0):
+                lastindex = lastSelection[0]
+                speechTextConfig["DEFAULT"]["lastindex"] = str(lastindex)
                 speechTextConfig.write(open(speechfilepath, "w"))
 
-            if (speechTextConfig.has_option("DEFAULT", "lastindex")):
-                lastindex = int(speechTextConfig["DEFAULT"]["lastindex"])
-            else:
-                lastindex = 0
-
-            # Save current active folder path and folder name
-            currentSessionFolderPath = folderpath
-            currentSessionFolderName = foldername
-
-            if (fileformat == ".mp3" or fileformat == ".wav"):
-                mangaImageFrame.grid_forget()  # hide manga frame
-                # show speech info frame
-                speechinfoTextFrame.grid(row=1, column=0, padx=0, pady=0)
-                loading = threading.Thread(
-                    target=loadCurrentSessionAudioListThread, args=(folderpath, lastindex))
-                loading.start()
-            elif (fileformat == ".pdf"):
-                speechinfoTextFrame.grid_forget()  # hide speech info frame
-                # show manga frame
-                mangaImageFrame.grid(row=0, column=0, padx=0, pady=0)
-                currentSessionListBox.delete(0, currentSessionListBox.size())
-                filepath = os.path.join(appDataFolderPath, filename)
-                currentPdfFile = pdfplumber.open(filepath)
-                numpages = len(currentPdfFile.pages)
-                for p in range(numpages):
-                    displayname = filename + " - page " + str(p + 1)
-                    currentSessionListBox.insert("end", displayname)
-                    currentSessionListBox.see(currentSessionListBox.size())
-                # Default to show 1st page
-                if (lastindex >= numpages):
-                    lastindex = 0
-                currentSessionListBox.select_set(lastindex)
-                currentSessionListBox.see(lastindex)
-                page = currentPdfFile.pages[lastindex]
-                imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
-                page.to_image().save(imagepath, format="png")
-                if (mangaImage != None):
-                    mangaImage.destroy()
-                    mangaImage = None
-                mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
-                mangaImage.grid(row=0, column=0)  # show widget
-                speechtext = page.extract_text()
-                speechtextEditArea.insert("end-1c", speechtext)
+        # Open new session
+        speechfilepath = os.path.join(
+            folderpath, foldername + "_speechtext.txt")
+        if (os.path.exists(speechfilepath)):
+            speechTextConfig.read(speechfilepath)
         else:
-            utils.displayErrorMessage("Select Origin Audio First")
+            speechTextConfig.add_section(foldername)
+            speechTextConfig.add_section(foldername + "_zh")
+            speechTextConfig["DEFAULT"]["format"] = fileformat
+            speechTextConfig["DEFAULT"]["lastindex"] = str(0)
+            speechTextConfig.write(open(speechfilepath, "w"))
+
+        if (speechTextConfig.has_option("DEFAULT", "lastindex")):
+            lastindex = int(speechTextConfig["DEFAULT"]["lastindex"])
+        else:
+            lastindex = 0
+
+        # Save current active folder path and folder name
+        currentSessionFolderPath = folderpath
+        currentSessionFolderName = foldername
+
+        if (fileformat == ".mp3" or fileformat == ".wav"):
+            mangaImageFrame.grid_forget()  # hide manga frame
+            # show speech info frame
+            speechinfoTextFrame.grid(row=1, column=0, padx=0, pady=0)
+            loading = threading.Thread(
+                target=loadCurrentSessionAudioListThread, args=(folderpath, lastindex))
+            loading.start()
+        elif (fileformat == ".pdf"):
+            speechinfoTextFrame.grid_forget()  # hide speech info frame
+            # show manga frame
+            mangaImageFrame.grid(row=0, column=0, padx=0, pady=0)
+            currentSessionListBox.delete(0, currentSessionListBox.size())
+            filepath = os.path.join(appDataFolderPath, filename)
+            currentPdfFile = pdfplumber.open(filepath)
+            numpages = len(currentPdfFile.pages)
+            for p in range(numpages):
+                displayname = filename + " - page " + str(p + 1)
+                currentSessionListBox.insert("end", displayname)
+                currentSessionListBox.see(currentSessionListBox.size())
+            # Default to show 1st page
+            if (lastindex >= numpages):
+                lastindex = 0
+            currentSessionListBox.select_set(lastindex)
+            currentSessionListBox.see(lastindex)
+            page = currentPdfFile.pages[lastindex]
+            imagepath = os.path.join(currentSessionFolderPath, "last_viewed_manga.png")
+            page.to_image().save(imagepath, format="png")
+            if (mangaImage != None):
+                mangaImage.destroy()
+                mangaImage = None
+            mangaImage = CanvasImage(mangaImageFrame, imagepath)  # create widget
+            mangaImage.grid(row=0, column=0)  # show widget
+            speechtext = page.extract_text()
+            speechtextEditArea.insert("end-1c", speechtext)
+    else:
+        utils.displayErrorMessage("Please select origin data file to load!")
 
 
 def getMangaOCRTextThread():
@@ -658,19 +640,22 @@ def translateTextThread():
         if (len(speechtext) > 0):
             speechinfoEditArea.delete("1.0", tk.END)
             speechinfoEditArea.insert("end-1c", speechtext)
+            mangaImageFrame.grid_forget()  # hide manga frame
+            # show speech info frame
+            speechinfoTextFrame.grid(row=1, column=0, padx=0, pady=0)
                     
 def translateTextHandler(event=None):
     translating = threading.Thread(target=translateTextThread)
     translating.start()
 
 def playRecordedAudioHandler(event=None):
-    if initialChecks():
+    if noRecorderRunning():
         filename = getRecordedAudioFileName()
-        if filename != '':
-            if os.path.exists(os.path.join(recordedAudioFolderPath, filename)):
-                print("playing " + os.path.join(recordedAudioFolderPath, filename))
-                a = AudioFile.audiofile(os.path.join(
-                    recordedAudioFolderPath, filename))
+        if (filename != ""):
+            filepath = os.path.join(recordedAudioFolderPath, filename)
+            if os.path.exists(filepath):
+                print("playing " + filepath)
+                a = AudioFile.audiofile(filepath)
                 a.play()
             else:
                 utils.displayErrorMessage("You must record audio first")
@@ -679,41 +664,37 @@ def playRecordedAudioHandler(event=None):
 
 
 def playBothAudioHandler(event=None):
-    if initialChecks():
+    if noRecorderRunning():
         playCurrentSessionAudioFileHandler()
         playRecordedAudioHandler()
 
-
 def startRecordingHandler(event=None):
-    global running
-    if initialChecks():
+    global activeAudioRecorder
+    if noRecorderRunning():
         filename = getRecordedAudioFileName()
-        if filename != '':
-            running = rec.open(os.path.join(
-                recordedAudioFolderPath, filename), 'wb')
-            running.start_recording()
+        if (filename != ""):
+            activeAudioRecorder = AudioRecorder.open(os.path.join(recordedAudioFolderPath, filename), 'wb')
+            activeAudioRecorder.start_recording()
         else:
-            utils.displayErrorMessage("Select Target Audio First 5")
-
+            utils.displayErrorMessage("Set audio recording file name!")
 
 def stopRecordingHandler(event=None):
-    global running
+    global activeAudioRecorder
 
-    if running is not None:
-        running.stop_recording()
-        running.close()
-        running = None
+    if activeAudioRecorder is not None:
+        activeAudioRecorder.stop_recording()
+        activeAudioRecorder.close()
+        activeAudioRecorder = None
     else:
         utils.displayErrorMessage('Recording Not Running')
 
 
 def startStopRecordingHandler(event=None):
-    global running
-    if running is not None:
+    global activeAudioRecorder
+    if activeAudioRecorder is not None:
         stopRecordingHandler()
     else:
         startRecordingHandler()
-
 
 def displayHotkeysPopupHandler(event=None):
     hotkeyList = """
@@ -777,8 +758,8 @@ if not os.path.exists(appDataFolderPath):
 if not os.path.exists(recordedAudioFolderPath):
     os.makedirs(recordedAudioFolderPath)
 
-rec = recorder.Recorder(channels=2)
-running = None
+AudioRecorder = recorder.Recorder(channels=2)
+activeAudioRecorder = None
 
 utils.root = tk.Tk()
 width = utils.root .winfo_screenwidth()

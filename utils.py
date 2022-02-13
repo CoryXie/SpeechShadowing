@@ -17,8 +17,11 @@ def displayErrorMessage(err):
 
 def displayInfoMessage(msg):
     global infoMessage
+    global errorMessage
     global root
     print(msg)
+    if errorMessage is not None:
+        errorMessage.set("")
     if infoMessage is not None:
         infoMessage.set(msg)
         root.update()
