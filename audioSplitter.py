@@ -29,8 +29,10 @@ class AudioSplitter(object):
     def split(self):
         utils.displayInfoMessage("Starting Split")
         # Load your audio.
-        song = AudioSegment.from_mp3(
-            os.path.join(self.filedirectory, self.filename))
+        pathparts = self.filename.rsplit(".", 1)
+        fileformat = pathparts[1]
+        song = AudioSegment.from_file(
+            os.path.join(self.filedirectory, self.filename), format=fileformat)
 
         # Split track where the silence is the min silence length or more and get chunks using
         # the imported function.

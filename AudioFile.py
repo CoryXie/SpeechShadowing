@@ -15,19 +15,15 @@ class audiofile:
     def play(self):
         """ Play entire file """
         utils.displayInfoMessage('Playing Audio')
-        if self.file[len(self.file) - 4:] == ".mp3":
-            song = AudioSegment.from_mp3(self.file)
-            play(song)
-        elif self.file[len(self.file) - 4:] == ".wav":
-            song = AudioSegment.from_wav(self.file)
-            play(song)
+        pathparts = self.file.rsplit(".", 1)
+        fileformat = pathparts[1]
+        song = AudioSegment.from_file(self.file, format=fileformat)
+        play(song)
         utils.displayInfoMessage('')
         utils.displayErrorMessage('')
 
     def length(self):
-        if self.file[len(self.file) - 4:] == ".mp3":
-            song = AudioSegment.from_mp3(self.file)
-            return song.duration_seconds
-        elif self.file[len(self.file) - 4:] == ".wav":
-            song = AudioSegment.from_wav(self.file)
-            return song.duration_seconds
+        pathparts = self.file.rsplit(".", 1)
+        fileformat = pathparts[1]
+        song = AudioSegment.from_file(self.file, format=fileformat)
+        return song.duration_seconds
