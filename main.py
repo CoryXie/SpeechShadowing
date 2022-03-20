@@ -24,6 +24,7 @@ import pytesseract
 import utils
 from PIL import ImageGrab, ImageTk, Image
 from manga_ocr import MangaOcr
+from datetime import date
 import pyttsx3
 import pdfplumber
 import SpeechToText
@@ -44,6 +45,8 @@ global mangaOCR
 global mangaImage
 global currentSessionFolderName
 global currentPdfFile
+global speechTextConfig
+global dailyWordsConfig
 
 appDataFolderPath = "./TargetAudio"
 recordedAudioFolderPath = "./RecordedAudio"
@@ -301,6 +304,7 @@ def splitAppAudioDataHandler(event=None):
         else:
             utils.displayErrorMessage('Select Target Audio To Split')
 
+
 def convertSpeechTextHandler(event=None):
     global currentSessionFolderPath
     filename = getCurrentSessionFileName()
@@ -351,6 +355,21 @@ def convertSpeechTextHandler(event=None):
         utils.displayErrorMessage("Please select audio to convert to text!")
 
 
+def saveDailyTextMeaningsHandler(event=None):
+    global dailyWordsConfig
+    # Add a section in the daily words config
+    today = date.today().strftime("%b-%d-%Y")
+    if (not dailyWordsConfig.has_section(today)):
+        dailyWordsConfig.add_section(today)
+    num_items = today + "-" + str(len(dailyWordsConfig.options(today)) + 1)
+    text_to_save = speechtextEditArea.get(
+        '0.0', tk.END).strip() + "\n"
+    text_to_save += speechinfoEditArea.get(
+        '0.0', tk.END).strip() + "\n"
+    dailyWordsConfig[today][num_items] = text_to_save
+    dailyWordsConfig.write(open(daily_text_meanings_file_path, "w"))
+
+
 def saveSpeechTextHandler(event=None):
     global currentSessionFolderPath
     global speechTextConfig
@@ -375,6 +394,8 @@ def loadSpeechTextInfoThread():
     translater = TranslateText.TranslateText(cfgfile="config.ini")
     translatedtext = translater.translate(speechtext)
     speechinfo = ichiran.ichiran(speechtext).info()
+    speechinfo = speechinfo.replace("NIL ", "").replace(
+        "  <1>", "\n<1>").replace("\n *", "\n    *")
     speechinfoEditArea.delete("1.0", tk.END)
     speechinfoEditArea.insert("end-1c", translatedtext + "\n" + speechinfo)
 
@@ -1026,6 +1047,13 @@ checkbox_split_with_vocals = tk.Checkbutton(
     lowLeftSplitButtonFrame, text="Vocal Separation", variable=splitWithVocals)
 checkbox_split_with_vocals.grid(row=0, column=1, pady=2)
 
+lowLeftDailyWordsFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
+lowLeftDailyWordsFrame.pack()
+
+button_daily_text_meanings = tk.Button(
+    lowLeftDailyWordsFrame, text='Save Daily Text Meanings', command=saveDailyTextMeaningsHandler)
+button_daily_text_meanings.grid(row=0, column=0, pady=2)
+
 lowLeftTextButtonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
 lowLeftTextButtonFrame.pack()
 
@@ -1167,9 +1195,9 @@ label.pack()
 # create speech text info area
 speechinfoScrollbarY = tk.Scrollbar(speechinfoTextFrame)
 ft = tkFont.Font(family="Courier New")
-speechinfoEditArea = tk.Text(speechinfoTextFrame, height=33, wrap="word",
+speechinfoEditArea = tk.Text(speechinfoTextFrame, height=27, wrap="word",
                              yscrollcommand=speechinfoScrollbarY.set,
-                             borderwidth=0, highlightthickness=0, maxundo=5, font=ft, width=60, bg="#F4F5FF", fg='HotPink1')
+                             borderwidth=0, highlightthickness=0, maxundo=5, font=ft, width=45, bg="#F4F5FF", fg='HotPink1')
 speechinfoScrollbarY.config(command=speechinfoEditArea.yview)
 speechinfoScrollbarY.pack(side="right", fill="y")
 speechinfoEditArea.pack(side="left", fill="both", expand=True)
@@ -1217,6 +1245,11 @@ utils.root.bind("<Shift_R>", startStopRecordingHandler)
 currentSessionListBox.bind("<<ListboxSelect>>", loadCurrentSessionFileHandler)
 ttsEngine = pyttsx3.init("sapi5")  # object creation
 speechTextConfig = configparser.ConfigParser()
+dailyWordsConfig = configparser.ConfigParser()
+daily_text_meanings_file_path = os.path.join(
+    appDataFolderPath, "DailyWords.txt")
+if (os.path.exists(daily_text_meanings_file_path)):
+    dailyWordsConfig.read(daily_text_meanings_file_path)
 
 
 def initLoading():
