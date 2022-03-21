@@ -11,7 +11,7 @@ import psutil
 
 class AudioSplitter(object):
 
-    def __init__(self, filedirectory, filename, outdirectory, minsilencelen=1000, silencethresh=-36, minchunklen=3000):
+    def __init__(self, filedirectory, filename, outdirectory, config, minsilencelen=1000, silencethresh=-36, minchunklen=3000):
         self.filedirectory = filedirectory
         self.filename = filename
         self.outdirectory = outdirectory
@@ -19,6 +19,7 @@ class AudioSplitter(object):
         self.silencethresh = silencethresh
         self.silencepaddinglen = 250
         self.minchunklen = minchunklen
+        self.config = config
 
     # Define a function to normalize a chunk to a target amplitude.
     def match_target_amplitude(self, aChunk, target_dBFS):
@@ -30,6 +31,7 @@ class AudioSplitter(object):
         utils.displayInfoMessage("Starting Split")
         # Load your audio.
         pathparts = self.filename.rsplit(".", 1)
+        filebase = pathparts[0]
         fileformat = pathparts[1]
         song = AudioSegment.from_file(
             os.path.join(self.filedirectory, self.filename), format=fileformat)
@@ -47,7 +49,11 @@ class AudioSplitter(object):
             keep_silence=300,
             seek_step=250
         )
-
+        nonsilent_chunks = [
+            [start - 300, end + 300]
+            for (start, end)
+            in detect_nonsilent(song, self.minsilencelen, self.silencethresh, 250)
+        ]
         numwidth = len(str(len(chunks)))
         # Process each chunk with your parameters
         for i, chunk in enumerate(chunks):
@@ -61,15 +67,18 @@ class AudioSplitter(object):
             # Normalize the entire chunk.
             normalized_chunk = self.match_target_amplitude(audio_chunk, -20.0)
 
+            # Generate the time ranges
+            start = nonsilent_chunks[i][0]
+            end = nonsilent_chunks[i][1]
+            chunk_base = "{0}-chunk{1}".format(
+                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
+            self.config[filebase + "_ranges"][chunk_base +
+                                              ".mp3"] = str(start) + "," + str(end)
             # Export the audio chunk with new bitrate.
-            mp3path = self.outdirectory + "//{0}-chunk{1}.mp3".format(
-                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            wavpath = self.outdirectory + "//{0}-chunk{1}.wav".format(
-                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            display = "{0}-chunk{1}.mp3".format(
-                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
+            mp3path = self.outdirectory + "/" + chunk_base + ".mp3"
+            wavpath = self.outdirectory + "/" + chunk_base + ".wav"
 
-            utils.displayInfoMessage("Exporting " + display)
+            utils.displayInfoMessage("Exporting " + chunk_base)
             normalized_chunk.export(mp3path, format="mp3")
             normalized_chunk = normalized_chunk.set_sample_width(
                 2).set_frame_rate(16000).set_channels(1)
@@ -82,6 +91,9 @@ class AudioSplitter(object):
         from spleeter.separator import Separator
 
         utils.displayInfoMessage("Starting Split Vocals")
+
+        pathparts = self.filename.rsplit(".", 1)
+        filebase = pathparts[0]
 
         filepath = os.path.join(self.filedirectory, self.filename)
         wavepath = os.path.join(self.outdirectory, "vocals.wav")
@@ -123,14 +135,15 @@ class AudioSplitter(object):
                 continue
 
             # Export the audio chunk with new bitrate.
-            mp3path = self.outdirectory + "//{0}-chunk{1}.mp3".format(
+            chunk_base = "{0}-chunk{1}".format(
                 self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            wavpath = self.outdirectory + "//{0}-chunk{1}.wav".format(
-                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
-            display = "{0}-chunk{1}.mp3".format(
-                self.filename[0:len(self.filename)-4], str(i).zfill(numwidth))
+            self.config[filebase + "_ranges"][chunk_base +
+                                              ".mp3"] = str(start) + "," + str(end)
+            # Export the audio chunk with new bitrate.
+            mp3path = self.outdirectory + "/" + chunk_base + ".mp3"
+            wavpath = self.outdirectory + "/" + chunk_base + ".wav"
 
-            utils.displayInfoMessage("Exporting " + display)
+            utils.displayInfoMessage("Exporting " + mp3path)
 
             song[start:end].export(mp3path, format="mp3")
             vocals[start:end].export(wavpath, format="wav")

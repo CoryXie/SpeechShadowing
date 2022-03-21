@@ -1,3 +1,4 @@
+import datetime
 from fnmatch import translate
 from glob import glob
 import io
@@ -22,6 +23,7 @@ import webbrowser
 import markdown
 import pytesseract
 import utils
+import srt
 from PIL import ImageGrab, ImageTk, Image
 from manga_ocr import MangaOcr
 from datetime import date
@@ -180,18 +182,32 @@ def refreshCurrentSessionFileList():
 def splitAppAudioFileListThread(filename):
     global activeAudioRecorder
     global currentSessionFolderPath
+    global speechTextConfig
     if activeAudioRecorder is not None:
         utils.displayErrorMessage('recording audio, gotta stop that first')
     else:
         silenceThreshold = int(combo_min_silence_threshold.get())
         silenceLength = int(combo_min_silence_length.get())
         vocalLength = int(combo_min_vocal_length.get())
+        pathparts = filename.rsplit(".", 1)
+        foldername = pathparts[0]
+        # Open new session
+        speechfilepath = os.path.join(
+            currentSessionFolderPath, foldername + "_speechtext.txt")
+
+        speechTextConfig.add_section(foldername)
+        speechTextConfig.add_section(foldername + "_zh")
+        speechTextConfig.add_section(foldername + "_ranges")
+        speechTextConfig["DEFAULT"]["format"] = ".mp3"
+        speechTextConfig["DEFAULT"]["lastindex"] = str(0)
+
         audiosplit = audioSplitter.AudioSplitter(
-            appDataFolderPath, filename, currentSessionFolderPath,
+            appDataFolderPath, filename, currentSessionFolderPath, speechTextConfig,
             minsilencelen=silenceLength,
             silencethresh=silenceThreshold,
             minchunklen=vocalLength)
         audiosplit.split()
+        speechTextConfig.write(open(speechfilepath, "w"))
         loadAppDataFileHandler()
 
 
@@ -231,16 +247,30 @@ def uploadAppDataFileHandler(event=None):
 def separateAudioDataFile(filename):
     global currentSessionFolderPath
     global silenceThreshold
+    global speechTextConfig
     print("Separating " + filename)
+    pathparts = filename.rsplit(".", 1)
+    foldername = pathparts[0]
     silenceThreshold = int(combo_min_silence_threshold.get())
     silenceLength = int(combo_min_silence_length.get())
     vocalLength = int(combo_min_vocal_length.get())
+    # Open new session
+    speechfilepath = os.path.join(
+        currentSessionFolderPath, foldername + "_speechtext.txt")
+
+    speechTextConfig.add_section(foldername)
+    speechTextConfig.add_section(foldername + "_zh")
+    speechTextConfig.add_section(foldername + "_ranges")
+    speechTextConfig["DEFAULT"]["format"] = ".mp3"
+    speechTextConfig["DEFAULT"]["lastindex"] = str(0)
+
     audiosplit = audioSplitter.AudioSplitter(
-        appDataFolderPath, filename, currentSessionFolderPath,
+        appDataFolderPath, filename, currentSessionFolderPath, speechTextConfig,
         minsilencelen=silenceLength,
         silencethresh=silenceThreshold,
         minchunklen=vocalLength)
     audiosplit.splitVocals()
+    speechTextConfig.write(open(speechfilepath, "w"))
     loadAppDataFileHandler()
 
 
@@ -369,6 +399,46 @@ def saveDailyTextMeaningsHandler(event=None):
     dailyWordsConfig[today][num_items] = text_to_save
     dailyWordsConfig.write(open(daily_text_meanings_file_path, "w"))
 
+
+def saveSRTHandler(event=None):
+    global currentSessionFolderPath
+    global speechTextConfig
+
+    foldername = os.path.basename(
+        os.path.normpath(currentSessionFolderPath))
+    print("foldername=" + foldername)
+    srtfilepath = os.path.join(
+        currentSessionFolderPath, foldername + "_srt.txt")
+    section = foldername + "_ranges"
+    if speechTextConfig.has_section(section):
+        range_items = speechTextConfig.items(section)
+    else:
+        print("no section=" + section)
+        return
+    subtitles = []
+    index = 1
+    for filename, ranges in range_items:
+        try:
+            ja = speechTextConfig[foldername][filename]
+            zh = speechTextConfig[foldername + "_zh"][filename]
+            print("filename=" + filename)
+            print("ranges=" + ranges)
+            content = ja + "\n" + zh
+            time_range = ranges.rsplit(",", 1)
+            start = datetime.timedelta(milliseconds=int(time_range[0]))
+            end = datetime.timedelta(milliseconds=int(time_range[1]))
+            subtitles.append(srt.Subtitle(
+                index=index, start=start, end=end, content=content))
+            index += 1
+        except ValueError:
+            print("ValueError")
+        except IndexError:
+            print("IndexError")
+        except KeyError:
+            print("KeyError")
+    srt_text = srt.compose(subtitles)
+    with open(srtfilepath, 'w') as f:
+        f.write(srt_text)
 
 def saveSpeechTextHandler(event=None):
     global currentSessionFolderPath
@@ -1053,6 +1123,10 @@ lowLeftDailyWordsFrame.pack()
 button_daily_text_meanings = tk.Button(
     lowLeftDailyWordsFrame, text='Save Daily Text Meanings', command=saveDailyTextMeaningsHandler)
 button_daily_text_meanings.grid(row=0, column=0, pady=2)
+
+button_save_srt = tk.Button(
+    lowLeftDailyWordsFrame, text='Save SRT', command=saveSRTHandler)
+button_save_srt.grid(row=0, column=1, pady=2)
 
 lowLeftTextButtonFrame = tk.Frame(lowLeftFrame, bg='light sky blue')
 lowLeftTextButtonFrame.pack()
